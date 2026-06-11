@@ -1,0 +1,9 @@
+pandas
+numpy
+duckdb
+pyarrow
+requests
+tqdm
+python-dateutil
+kaggle
+
