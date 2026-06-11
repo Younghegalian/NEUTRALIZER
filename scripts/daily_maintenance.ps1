@@ -46,6 +46,7 @@ function Resolve-NeutralizerPython {
 $Python = Resolve-NeutralizerPython
 $StartDate = if ($env:NEUTRALIZER_START_DATE) { $env:NEUTRALIZER_START_DATE } else { "2010-01-01" }
 $YahooWorkers = if ($env:NEUTRALIZER_YAHOO_WORKERS) { $env:NEUTRALIZER_YAHOO_WORKERS } else { "6" }
+$FmpProfileLimit = if ($env:NEUTRALIZER_FMP_PROFILE_LIMIT) { $env:NEUTRALIZER_FMP_PROFILE_LIMIT } else { "0" }
 $Year = (Get-Date).Year
 $Quarter = [Math]::Floor(((Get-Date).Month - 1) / 3) + 1
 
@@ -71,6 +72,8 @@ foreach ($path in @($secIndex, $secForm345)) {
 & $Python -m src.run_pipeline --step load_kaggle_delisted --start-date $StartDate --end-date today
 & $Python -m src.run_pipeline --step fmp_metadata --start-date $StartDate --end-date today
 & $Python -m src.run_pipeline --step normalize --start-date $StartDate --end-date today
+& $Python -m src.run_pipeline --step fmp_profiles --fmp-profile-limit $FmpProfileLimit
+& $Python -m src.run_pipeline --step security_master
 & $Python -m src.run_pipeline --step liquidity
 & $Python -m src.run_pipeline --step universe
 & $Python -m src.run_pipeline --step duckdb

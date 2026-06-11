@@ -28,6 +28,16 @@ Latest local build produced:
 | Universe memberships | 13,740,815 |
 | Median daily universe count | 3,053 |
 
+Security classification:
+
+| Area | Value |
+| --- | ---: |
+| `security_master` symbols | 11,803 |
+| Stock-classified symbols | 6,923 |
+| ETF-classified symbols | 4,861 |
+| Unknown/fund symbols | 19 |
+| Sector/industry-enriched symbols | 184 |
+
 SEC-led delisting discovery:
 
 | Area | Value |
@@ -67,7 +77,7 @@ assets/brand/               NEUTRALIZER CI assets
 docs/                       Architecture, data dictionary, maintenance notes
 scripts/                    Operator scripts
 src/collectors/             Source collectors
-src/normalize/              Canonical price merge and symbol master
+src/normalize/              Canonical prices, symbol master, and security master
 src/universe/               Liquidity metrics and daily universe
 src/db/                     DuckDB build and query helpers
 tests/                      Unit tests
@@ -86,6 +96,7 @@ Core tables:
 | --- | --- |
 | `daily_prices` | Canonical OHLCV daily bars |
 | `symbol_master` | Source coverage and symbol ranges |
+| `security_master` | Asset type, ETF flag, exchange, name, sector, and industry |
 | `liquidity_metrics` | Dollar volume, ADV20, next open |
 | `universe_membership` | Date-by-date backtest universe |
 | `universe_stats` | Daily sanity metrics |
@@ -128,10 +139,12 @@ Use `src/db/query_examples.py`:
 
 ```python
 from src.db.query_examples import get_universe, get_prices, get_price_panel
+from src.db.query_examples import get_security_master
 
 symbols = get_universe("2020-01-02")
 prices = get_prices("2020-01-02", symbols[:100])
 panel = get_price_panel("2020-01-02", "2020-03-31")
+metadata = get_security_master(symbols[:100])
 ```
 
 ## Source Model
@@ -146,6 +159,7 @@ NEUTRALIZER uses SEC as the primary delisting discovery spine. Price bars are th
 | Active OHLCV baseline | Yahoo chart API | Pulls current listed-symbol daily bars. |
 | Supplemental delisted OHLCV | Kaggle Arandkei archive | Adds delisted historical bars available in the archive. |
 | Metadata enrichment | FMP delisted metadata | Optional enrichment, limited by API plan. |
+| Sector/industry enrichment | FMP profile metadata | Optional incremental profile cache, limited by API plan. |
 | Supplemental OHLCV | Stooq bulk archive | Attempted when available; pipeline continues without it. |
 
 Yahoo chart responses are accepted only when metadata identifies a USD `EQUITY` or `ETF`; non-equity, non-USD, and placeholder `YHD` matches are rejected before normalization.
@@ -169,7 +183,7 @@ python -m src.tools.audit_daily_prices
 Latest validation:
 
 ```text
-Ran 10 tests
+Ran 11 tests
 OK
 ```
 

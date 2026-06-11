@@ -21,6 +21,7 @@ RAW_SEC_DIR = RAW_DIR / "sec"
 STOOQ_STAGING_PATH = STAGING_DIR / "stooq_daily_prices.parquet"
 KAGGLE_DELISTED_STAGING_PATH = STAGING_DIR / "kaggle_delisted_daily_prices.parquet"
 FMP_DELISTED_METADATA_PATH = STAGING_DIR / "fmp_delisted_metadata.parquet"
+FMP_PROFILE_METADATA_PATH = STAGING_DIR / "fmp_profile_metadata.parquet"
 YAHOO_FALLBACK_STAGING_PATH = STAGING_DIR / "yahoo_fallback_daily_prices.parquet"
 SEC_DELISTING_FILINGS_PATH = STAGING_DIR / "sec_delisting_filings.parquet"
 SEC_FORM345_TICKER_MAP_PATH = STAGING_DIR / "sec_form345_ticker_map.parquet"
@@ -30,6 +31,7 @@ YAHOO_DELISTED_COVERAGE_PATH = RESEARCH_DIR / "yahoo_delisted_probe_coverage.par
 
 DAILY_PRICES_PATH = NORMALIZED_DIR / "daily_prices.parquet"
 SYMBOL_MASTER_PATH = NORMALIZED_DIR / "symbol_master.parquet"
+SECURITY_MASTER_PATH = NORMALIZED_DIR / "security_master.parquet"
 DUPLICATE_REPORT_PATH = NORMALIZED_DIR / "duplicate_report.parquet"
 BAD_ROWS_REPORT_PATH = NORMALIZED_DIR / "bad_rows_report.parquet"
 
@@ -63,6 +65,20 @@ SYMBOL_MASTER_COLUMNS = [
     "has_active_source",
     "has_delisted_source",
     "observation_count",
+]
+
+SECURITY_MASTER_COLUMNS = [
+    "symbol",
+    "asset_type",
+    "is_etf",
+    "instrument_type",
+    "security_name",
+    "exchange",
+    "currency",
+    "sector",
+    "industry",
+    "classification_source",
+    "sector_source",
 ]
 
 LIQUIDITY_COLUMNS = [

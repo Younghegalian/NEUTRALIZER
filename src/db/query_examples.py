@@ -61,6 +61,28 @@ def get_prices(
         con.close()
 
 
+def get_security_master(
+    symbols: list[str] | None = None,
+    db_path: Path = config.DUCKDB_PATH,
+) -> pd.DataFrame:
+    con = _connect(db_path)
+    try:
+        if not symbols:
+            return con.execute("SELECT * FROM security_master ORDER BY symbol").fetchdf()
+        placeholders = ",".join(["?"] * len(symbols))
+        return con.execute(
+            f"""
+            SELECT *
+            FROM security_master
+            WHERE symbol IN ({placeholders})
+            ORDER BY symbol
+            """,
+            symbols,
+        ).fetchdf()
+    finally:
+        con.close()
+
+
 def get_price_panel(
     start_date: str,
     end_date: str,
@@ -84,4 +106,3 @@ def get_price_panel(
         ).fetchdf()
     finally:
         con.close()
-

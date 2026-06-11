@@ -7,6 +7,7 @@ import pandas as pd
 
 from src import config
 from src.collectors.fmp_delisted_metadata import collect_fmp_delisted_metadata
+from src.collectors.fmp_profile_metadata import collect_fmp_profile_metadata
 from src.collectors.kaggle_downloader import download_kaggle_delisted_dataset
 from src.collectors.kaggle_delisted_loader import load_kaggle_delisted
 from src.collectors.sec_delisting_collector import (
@@ -23,6 +24,7 @@ from src.collectors.yahoo_fallback_downloader import (
     collect_yahoo_fallback,
 )
 from src.db.build_duckdb import build_duckdb
+from src.normalize.build_security_master import build_security_master
 from src.normalize.normalize_prices import normalize_prices
 from src.tools.check_prereqs import check_prereqs
 from src.universe.build_universe import build_universe
@@ -40,6 +42,8 @@ FULL_PIPELINE_STEPS = [
     "load_kaggle_delisted",
     "fmp_metadata",
     "normalize",
+    "fmp_profiles",
+    "security_master",
     "liquidity",
     "universe",
     "duckdb",
@@ -73,6 +77,8 @@ def run_step(args: argparse.Namespace, step: str) -> None:
         load_kaggle_delisted()
     elif step == "fmp_metadata":
         collect_fmp_delisted_metadata()
+    elif step == "fmp_profiles":
+        collect_fmp_profile_metadata(limit=args.fmp_profile_limit)
     elif step == "collect_yahoo":
         symbols = _read_symbols_file(args.yahoo_symbols_file)
         if not symbols:
@@ -117,6 +123,8 @@ def run_step(args: argparse.Namespace, step: str) -> None:
         )
     elif step == "normalize":
         normalize_prices(start_date=start_date, end_date=end_date)
+    elif step == "security_master":
+        build_security_master()
     elif step == "liquidity":
         compute_liquidity()
     elif step == "universe":
@@ -166,7 +174,7 @@ def print_summary() -> None:
         median_universe_count_text = "n/a"
 
     print()
-    print("SpectraGrid Market DB build complete.")
+    print("NEUTRALIZER market DB build complete.")
     print()
     print(f"Date range: {date_start} to {date_end}")
     print(f"Symbols total: {symbols_total:,}")
@@ -181,7 +189,7 @@ def print_summary() -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Build the SpectraGrid local market database.")
+    parser = argparse.ArgumentParser(description="Build the NEUTRALIZER local market database.")
     parser.add_argument("--start-date", default="2010-01-01", help="Inclusive start date, YYYY-MM-DD.")
     parser.add_argument("--end-date", default="today", help="Inclusive end date, YYYY-MM-DD or today.")
     parser.add_argument(
@@ -237,6 +245,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sec-start-year", type=int, default=2010, help="First SEC index year to collect.")
     parser.add_argument("--sec-end-year", type=int, help="Last SEC index year to collect.")
     parser.add_argument("--sec-doc-limit", type=int, help="Optional cap for SEC document enrichment.")
+    parser.add_argument(
+        "--fmp-profile-limit",
+        type=int,
+        default=0,
+        help="Maximum new FMP profile requests for sector/industry enrichment; cached profiles are always parsed.",
+    )
     parser.add_argument(
         "--skip-sec-doc-enrich",
         action="store_true",

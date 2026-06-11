@@ -29,13 +29,29 @@
 | `has_delisted_source` | Has delisted-source coverage. |
 | `observation_count` | Canonical daily rows. |
 
+## `security_master`
+
+| Column | Description |
+| --- | --- |
+| `symbol` | Internal symbol. |
+| `asset_type` | `stock`, `etf`, `fund`, or `unknown`. |
+| `is_etf` | ETF flag from FMP, Nasdaq Trader, or Yahoo metadata. |
+| `instrument_type` | Yahoo instrument type when available. |
+| `security_name` | Best available company/fund name. |
+| `exchange` | Best available exchange label. |
+| `currency` | Best available quote currency. |
+| `sector` | FMP profile sector when cached. |
+| `industry` | FMP profile industry when cached. |
+| `classification_source` | Source used for asset classification/name. |
+| `sector_source` | Source used for sector/industry enrichment. |
+
 ## `liquidity_metrics`
 
 | Column | Description |
 | --- | --- |
 | `dollar_volume` | `close * volume`. |
 | `adv20` | Symbol-specific rolling 20-day mean dollar volume. |
-| `traded_days_20` | Non-null volume days in rolling 20-day window. |
+| `traded_days_20` | Positive-volume days in rolling 20-day window. |
 | `next_open` | Next available open for the same symbol. |
 | `has_next_open` | True when `next_open` is available. |
 
@@ -51,4 +67,3 @@
 ## `universe_stats`
 
 Daily sanity table with symbol counts, median close, median ADV20, total dollar volume, and delisted-source count.
-

@@ -18,6 +18,7 @@ class DuckDBTest(unittest.TestCase):
             root = Path(tmp)
             daily_prices_path = root / "daily_prices.parquet"
             symbol_master_path = root / "symbol_master.parquet"
+            security_master_path = root / "security_master.parquet"
             liquidity_path = root / "liquidity_metrics.parquet"
             membership_path = root / "universe_membership.parquet"
             stats_path = root / "universe_stats.parquet"
@@ -56,6 +57,24 @@ class DuckDBTest(unittest.TestCase):
                 ],
                 columns=config.SYMBOL_MASTER_COLUMNS,
             ).to_parquet(symbol_master_path, index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "symbol": "GOOD",
+                        "asset_type": "stock",
+                        "is_etf": False,
+                        "instrument_type": "EQUITY",
+                        "security_name": "Good Co.",
+                        "exchange": "NYSE",
+                        "currency": "USD",
+                        "sector": "Industrials",
+                        "industry": "Testing",
+                        "classification_source": "test",
+                        "sector_source": "test",
+                    }
+                ],
+                columns=config.SECURITY_MASTER_COLUMNS,
+            ).to_parquet(security_master_path, index=False)
             pd.DataFrame(
                 [
                     {
@@ -102,6 +121,7 @@ class DuckDBTest(unittest.TestCase):
                 db_path=db_path,
                 daily_prices_path=daily_prices_path,
                 symbol_master_path=symbol_master_path,
+                security_master_path=security_master_path,
                 liquidity_metrics_path=liquidity_path,
                 universe_membership_path=membership_path,
                 universe_stats_path=stats_path,

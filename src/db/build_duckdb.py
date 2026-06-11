@@ -21,6 +21,7 @@ def build_duckdb(
     db_path: Path = config.DUCKDB_PATH,
     daily_prices_path: Path = config.DAILY_PRICES_PATH,
     symbol_master_path: Path = config.SYMBOL_MASTER_PATH,
+    security_master_path: Path = config.SECURITY_MASTER_PATH,
     liquidity_metrics_path: Path = config.LIQUIDITY_METRICS_PATH,
     universe_membership_path: Path = config.UNIVERSE_MEMBERSHIP_PATH,
     universe_stats_path: Path = config.UNIVERSE_STATS_PATH,
@@ -33,6 +34,7 @@ def build_duckdb(
         for table in [
             "daily_prices",
             "symbol_master",
+            "security_master",
             "liquidity_metrics",
             "universe_membership",
             "universe_stats",
@@ -67,6 +69,23 @@ def build_duckdb(
                 has_active_source BOOLEAN,
                 has_delisted_source BOOLEAN,
                 observation_count BIGINT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE security_master (
+                symbol TEXT,
+                asset_type TEXT,
+                is_etf BOOLEAN,
+                instrument_type TEXT,
+                security_name TEXT,
+                exchange TEXT,
+                currency TEXT,
+                sector TEXT,
+                industry TEXT,
+                classification_source TEXT,
+                sector_source TEXT
             )
             """
         )
@@ -148,6 +167,26 @@ def build_duckdb(
         )
         _insert_from_parquet(
             con,
+            "security_master",
+            security_master_path,
+            """
+            SELECT
+                CAST(symbol AS TEXT),
+                CAST(asset_type AS TEXT),
+                CAST(is_etf AS BOOLEAN),
+                CAST(instrument_type AS TEXT),
+                CAST(security_name AS TEXT),
+                CAST(exchange AS TEXT),
+                CAST(currency AS TEXT),
+                CAST(sector AS TEXT),
+                CAST(industry AS TEXT),
+                CAST(classification_source AS TEXT),
+                CAST(sector_source AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
             "liquidity_metrics",
             liquidity_metrics_path,
             """
@@ -195,6 +234,7 @@ def build_duckdb(
         )
 
         con.execute("CREATE INDEX IF NOT EXISTS idx_prices_date_symbol ON daily_prices(date, symbol)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_security_symbol ON security_master(symbol)")
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_universe_date_name ON universe_membership(date, universe_name)"
         )
@@ -209,4 +249,3 @@ def build_duckdb(
 if __name__ == "__main__":
     config.ensure_directories()
     build_duckdb()
-

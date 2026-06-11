@@ -11,6 +11,7 @@ SEC delisting discovery
   -> staging parquet
   -> canonical daily_prices
   -> symbol_master
+  -> security_master
   -> liquidity_metrics
   -> universe_membership
   -> universe_stats
@@ -26,6 +27,7 @@ SEC delisting discovery
 | `yahoo_fallback_downloader.py` | `data/staging/yahoo_fallback_daily_prices.parquet` | Active current-symbol daily bars. |
 | `kaggle_delisted_loader.py` | `data/staging/kaggle_delisted_daily_prices.parquet` | Arandkei archive loader. |
 | `fmp_delisted_metadata.py` | `data/staging/fmp_delisted_metadata.parquet` | Optional metadata enrichment. |
+| `fmp_profile_metadata.py` | `data/staging/fmp_profile_metadata.parquet` | Optional cached sector and industry enrichment. |
 | `stooq_downloader.py` | `data/staging/stooq_daily_prices.parquet` | Bulk archive attempted; pipeline continues when unavailable. |
 
 ## Canonical Merge
@@ -34,6 +36,7 @@ SEC delisting discovery
 
 - `data/normalized/daily_prices.parquet`
 - `data/normalized/symbol_master.parquet`
+- `data/normalized/security_master.parquet`
 - `data/normalized/duplicate_report.parquet`
 - `data/normalized/bad_rows_report.parquet`
 
@@ -45,6 +48,23 @@ Source priority:
 4. `kaggle_arandkei_delisted`
 
 Price validation rejects rows with null OHLC, non-positive OHLC, negative volume, `high < low`, or `open`/`close` outside the `[low, high]` range.
+
+## Security Master
+
+`src/normalize/build_security_master.py` builds asset classification separately from price coverage.
+
+Primary fields:
+
+- `asset_type`: `stock`, `etf`, `fund`, or `unknown`
+- `is_etf`
+- `instrument_type`
+- `security_name`
+- `exchange`
+- `currency`
+- `sector`
+- `industry`
+
+Stock/ETF classification comes from Yahoo metadata and Nasdaq Trader listing metadata. Sector and industry come from the optional FMP profile cache.
 
 ## Universe
 

@@ -20,6 +20,16 @@ Coverage is split into two different questions:
 | Final delisted-source symbols | 1,782 |
 | Delisted-source universe memberships | 975,928 |
 
+## Latest Classification Coverage
+
+| Metric | Value |
+| --- | ---: |
+| Security master symbols | 11,803 |
+| Stock-classified symbols | 6,923 |
+| ETF-classified symbols | 4,861 |
+| Unknown/fund symbols | 19 |
+| Sector/industry-enriched symbols | 184 |
+
 ## Latest Local Validation
 
 | Check | Result |
@@ -41,6 +51,7 @@ Coverage is split into two different questions:
 - Ticker reuse can contaminate historical joins when metadata is weak.
 - Kaggle and FMP coverage depends on available plan/data limits.
 - Yahoo adjusted historical prices and vendor volume can still distort dollar-volume estimates for heavily split-adjusted securities.
+- Sector and industry coverage depends on cached FMP profile requests and will grow incrementally under API limits.
 
 ## Audit Files
 

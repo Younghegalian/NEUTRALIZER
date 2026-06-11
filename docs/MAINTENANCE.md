@@ -17,6 +17,12 @@ $env:NEUTRALIZER_PYTHON="C:\Path\To\python.exe"
 
 The daily maintenance script uses `NEUTRALIZER_PYTHON` when set and otherwise tries a local `.venv`, normal PATH Python, and the Codex bundled Python runtime.
 
+Sector and industry enrichment is incremental because FMP API limits apply. Set this before maintenance to allow new profile requests:
+
+```powershell
+$env:NEUTRALIZER_FMP_PROFILE_LIMIT="200"
+```
+
 ## Standard Daily Run
 
 ```powershell
@@ -31,11 +37,13 @@ The script:
 4. Refreshes SEC delisting candidates.
 5. Probes Yahoo for newly recoverable delisted candidates.
 6. Loads Kaggle delisted data if present.
-7. Rebuilds normalized parquet.
-8. Recomputes liquidity metrics and universe tables.
-9. Rebuilds `data/pit_market.duckdb`.
-10. Audits daily-bar grain, nulls, OHLC validity, date validity, and table integrity.
-11. Runs unit tests.
+7. Rebuilds normalized price and symbol parquet.
+8. Refreshes cached FMP profile metadata up to `NEUTRALIZER_FMP_PROFILE_LIMIT`.
+9. Rebuilds `security_master`.
+10. Recomputes liquidity metrics and universe tables.
+11. Rebuilds `data/pit_market.duckdb`.
+12. Audits daily-bar grain, nulls, OHLC validity, date validity, and table integrity.
+13. Runs unit tests.
 
 ## Faster Manual Runs
 
@@ -61,6 +69,8 @@ Rebuild local database from existing staging files:
 
 ```powershell
 python -m src.run_pipeline --step normalize --start-date 2010-01-01 --end-date today
+python -m src.run_pipeline --step fmp_profiles --fmp-profile-limit 0
+python -m src.run_pipeline --step security_master
 python -m src.run_pipeline --step liquidity
 python -m src.run_pipeline --step universe
 python -m src.run_pipeline --step duckdb

@@ -35,6 +35,7 @@ daily_checks AS (
 integrity_checks AS (
     SELECT
         (SELECT COUNT(*) FROM daily_prices p LEFT JOIN symbol_master s USING(symbol) WHERE s.symbol IS NULL) AS prices_missing_symbol_master,
+        (SELECT COUNT(*) FROM symbol_master s LEFT JOIN security_master sm USING(symbol) WHERE sm.symbol IS NULL) AS symbol_master_missing_security_master,
         (SELECT COUNT(*) FROM liquidity_metrics l LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS liquidity_without_price,
         (SELECT COUNT(*) FROM universe_membership u LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS universe_without_price
 )
@@ -54,6 +55,7 @@ UNION ALL SELECT 'ohlc_outside_high_low', ohlc_outside_high_low FROM daily_check
 UNION ALL SELECT 'future_dates', future_dates FROM daily_checks
 UNION ALL SELECT 'weekend_rows', weekend_rows FROM daily_checks
 UNION ALL SELECT 'prices_missing_symbol_master', prices_missing_symbol_master FROM integrity_checks
+UNION ALL SELECT 'symbol_master_missing_security_master', symbol_master_missing_security_master FROM integrity_checks
 UNION ALL SELECT 'liquidity_without_price', liquidity_without_price FROM integrity_checks
 UNION ALL SELECT 'universe_without_price', universe_without_price FROM integrity_checks
 ORDER BY check_name
