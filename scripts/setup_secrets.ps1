@@ -63,5 +63,4 @@ else {
     Write-Host "Skipped FMP key."
 }
 
-Write-Host "Done. Run: python -m src.run_pipeline --step check"
-
+Write-Host "Done. Run: powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1"

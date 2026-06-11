@@ -3,7 +3,47 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
 
-$Python = if ($env:NEUTRALIZER_PYTHON) { $env:NEUTRALIZER_PYTHON } else { "python" }
+function Test-PythonCandidate {
+    param([string]$Candidate)
+
+    try {
+        & $Candidate -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" | Out-Null
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
+function Resolve-NeutralizerPython {
+    if ($env:NEUTRALIZER_PYTHON) {
+        if (Test-PythonCandidate -Candidate $env:NEUTRALIZER_PYTHON) {
+            return $env:NEUTRALIZER_PYTHON
+        }
+        throw "NEUTRALIZER_PYTHON is set but is not a usable Python 3.10+ executable: $env:NEUTRALIZER_PYTHON"
+    }
+
+    $candidates = @()
+    foreach ($commandName in @("python", "python3")) {
+        $command = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($command -and $command.Source -and $command.Source -notlike "*\Microsoft\WindowsApps\*") {
+            $candidates += $command.Source
+        }
+    }
+
+    $candidates += Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+    $candidates += Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        if ((Test-Path -LiteralPath $candidate) -and (Test-PythonCandidate -Candidate $candidate)) {
+            return $candidate
+        }
+    }
+
+    throw "No usable Python 3.10+ executable found. Set NEUTRALIZER_PYTHON to your Python path."
+}
+
+$Python = Resolve-NeutralizerPython
 $StartDate = if ($env:NEUTRALIZER_START_DATE) { $env:NEUTRALIZER_START_DATE } else { "2010-01-01" }
 $YahooWorkers = if ($env:NEUTRALIZER_YAHOO_WORKERS) { $env:NEUTRALIZER_YAHOO_WORKERS } else { "6" }
 $Year = (Get-Date).Year
@@ -37,4 +77,3 @@ foreach ($path in @($secIndex, $secForm345)) {
 & $Python -m unittest discover -s tests
 
 Write-Host "NEUTRALIZER daily maintenance complete."
-

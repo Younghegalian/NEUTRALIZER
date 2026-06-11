@@ -9,6 +9,14 @@ Daily maintenance is designed for a local machine that already has the required 
 - Optional FMP key for metadata enrichment
 - Network access to SEC and Yahoo
 
+On Windows, if `python` resolves to the Microsoft Store alias, set an explicit runtime before running manual commands:
+
+```powershell
+$env:NEUTRALIZER_PYTHON="C:\Path\To\python.exe"
+```
+
+The daily maintenance script uses `NEUTRALIZER_PYTHON` when set and otherwise tries a local `.venv`, normal PATH Python, and the Codex bundled Python runtime.
+
 ## Standard Daily Run
 
 ```powershell
@@ -56,4 +64,3 @@ python -m src.run_pipeline --step liquidity
 python -m src.run_pipeline --step universe
 python -m src.run_pipeline --step duckdb
 ```
-
