@@ -6,37 +6,61 @@
   </picture>
 </p>
 
-# NEUTRALIZER
+<h1 align="center">NEUTRALIZER</h1>
 
-NEUTRALIZER is a local, point-in-time oriented U.S. equity daily-bar database builder for survivorship-reduced backtesting.
+<p align="center">
+  <strong>Local-first PIT market data infrastructure for survivorship-reduced U.S. equity backtesting.</strong>
+</p>
 
-It builds a local DuckDB database from reproducible collectors and keeps all raw/vendor data, parquet outputs, and database files outside Git. The repository stores only the pipeline, tests, documentation, and brand assets.
+<p align="center">
+  <img alt="DuckDB" src="https://img.shields.io/badge/storage-DuckDB-FFF000?style=flat-square">
+  <img alt="Daily bars" src="https://img.shields.io/badge/daily_bars-23.96M-243BFF?style=flat-square">
+  <img alt="Symbols" src="https://img.shields.io/badge/symbols-11.8K-111111?style=flat-square">
+  <img alt="SEC led" src="https://img.shields.io/badge/delisting_spine-SEC-1F6FEB?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-11_passing-2EA043?style=flat-square">
+</p>
 
-## Current Build Snapshot
+NEUTRALIZER builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
 
-Latest local build produced:
+This repository contains the pipeline, tests, documentation, and brand assets. Generated market data, raw vendor/API responses, DuckDB files, and secrets stay local and are intentionally ignored by Git.
 
-| Area | Value |
+## What You Get
+
+| Capability | Delivered artifact |
+| --- | --- |
+| PIT-style daily OHLCV | `daily_prices` with `date + symbol` grain |
+| Active and delisted coverage | Active Yahoo bars plus SEC-candidate Yahoo recovery and Kaggle delisted archive |
+| Security classification | `security_master` with stock/ETF/fund classification, exchange, name, sector, and industry fields |
+| Backtest universe | `universe_membership` rebuilt daily from price, volume, ADV20, and next-open eligibility |
+| Liquidity features | `liquidity_metrics` with dollar volume, ADV20, positive-volume traded days, and next open |
+| Quality gates | Unit tests plus a hard daily-bar audit for duplicates, nulls, OHLC validity, dates, and joins |
+
+## Data Product Snapshot
+
+Latest local build:
+
+| Metric | Value |
 | --- | ---: |
-| Final DuckDB | `data/pit_market.duckdb` |
+| Final database | `data/pit_market.duckdb` |
+| Price date range | 2010-01-01 to 2026-06-11 |
 | Daily price rows | 23,965,894 |
-| Total symbols | 11,803 |
+| Priced symbols | 11,803 |
 | Active-source symbols | 10,021 |
 | Delisted-source symbols | 1,782 |
-| Price date range | 2010-01-01 to 2026-06-11 |
+| Trading dates | 4,249 |
 | Universe date range | 2010-01-25 to 2026-06-09 |
 | Universe memberships | 13,740,815 |
-| Median daily universe count | 3,053 |
+| Median daily universe size | 3,053 |
 
 Security classification:
 
-| Area | Value |
+| Classification | Symbols |
 | --- | ---: |
-| `security_master` symbols | 11,803 |
-| Stock-classified symbols | 6,923 |
-| ETF-classified symbols | 4,861 |
-| Unknown/fund symbols | 19 |
-| Sector/industry-enriched symbols | 184 |
+| Stock | 6,923 |
+| ETF | 4,861 |
+| Unknown | 18 |
+| Fund | 1 |
+| Sector/industry enriched | 184 |
 
 SEC-led delisting discovery:
 
@@ -49,6 +73,17 @@ SEC-led delisting discovery:
 | Yahoo equity/ETF/USD cache accepted | 1,813 |
 | Yahoo non-equity/non-USD/empty cache rejected | 2,628 |
 
+## Inside The DuckDB
+
+| Table | Rows | Grain | What is inside |
+| --- | ---: | --- | --- |
+| `daily_prices` | 23,965,894 | `date, symbol` | Canonical OHLCV bars, adjusted close, source, delisted-source flag |
+| `symbol_master` | 11,803 | `symbol` | First/last price date, source list, active/delisted coverage flags |
+| `security_master` | 11,803 | `symbol` | Asset type, ETF flag, instrument type, name, exchange, currency, sector, industry |
+| `liquidity_metrics` | 23,965,894 | `date, symbol` | Dollar volume, ADV20, positive-volume traded days, next open |
+| `universe_membership` | 13,740,815 | `date, universe, symbol` | Tradable universe membership by date |
+| `universe_stats` | 4,231 | `date, universe` | Daily sanity metrics for universe size, median close, ADV, and volume |
+
 Price-bar source coverage:
 
 | Source | Rows | Symbols | Range |
@@ -57,49 +92,106 @@ Price-bar source coverage:
 | `yahoo_delisted_probe` | 3,649,850 | 1,767 | 2010-01-04 to 2026-06-11 |
 | `kaggle_arandkei_delisted` | 33,398 | 15 | 2010-01-01 to 2026-02-23 |
 
-## What This Is
+## Sample Records
 
-- A local PIT-style market database builder for daily backtests.
-- A survivorship-reduced research database, not a CRSP-grade security master.
-- A reproducible Python pipeline that writes Parquet and DuckDB.
-- A daily-maintainable project structure with explicit source coverage reports.
+`daily_prices`:
 
-## What This Is Not
+| date | symbol | open | high | low | close | volume | source | delisted |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| 2026-06-10 | BINI | 0.08 | 0.09 | 0.06 | 0.08 | 17,400 | `yahoo_delisted_probe` | true |
+| 2026-06-10 | DIDIY | 3.48 | 3.60 | 3.48 | 3.58 | 15,635,100 | `yahoo_delisted_probe` | true |
+| 2026-06-10 | SPY | 733.39 | 738.38 | 725.33 | 725.43 | 59,800,600 | `yahoo_fallback` | false |
+| 2026-06-09 | AAPL | 300.28 | 300.75 | 287.78 | 290.55 | 70,108,800 | `yahoo_fallback` | false |
+| 2026-06-08 | BINI | 0.06 | 0.07 | 0.05 | 0.06 | 26,600 | `yahoo_delisted_probe` | true |
 
-- Not a complete CRSP, Norgate, Bloomberg, or Refinitiv replacement.
-- Not a guarantee that every historical delisted U.S. security has been recovered.
-- Not an intraday, options, fundamentals, or live trading system.
+`security_master`:
 
-## Repository Layout
+| symbol | asset_type | is_etf | instrument_type | security_name | exchange | sector | industry |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| AAPL | stock | false | EQUITY | Apple Inc. | NASDAQ | Technology | Consumer Electronics |
+| BINI | stock | false | EQUITY | Bollinger Innovations, Inc. | OTC Markets OTCPK |  |  |
+| DIDIY | stock | false | EQUITY | DiDi Global Inc. | OTC Markets OTCPK |  |  |
+| SPY | etf | true | ETF | State Street SPDR S&P 500 ETF Trust | NYSEArca |  |  |
+| UVXY | etf | true | ETF | ProShares Ultra VIX Short-Term Futures ETF | Cboe US |  |  |
 
-```text
-assets/brand/               NEUTRALIZER CI assets
-docs/                       Architecture, data dictionary, maintenance notes
-scripts/                    Operator scripts
-src/collectors/             Source collectors
-src/normalize/              Canonical prices, symbol master, and security master
-src/universe/               Liquidity metrics and daily universe
-src/db/                     DuckDB build and query helpers
-tests/                      Unit tests
-data/                       Local-only generated data, ignored by Git
+## Query Contract
+
+Python helpers:
+
+```python
+from src.db.query_examples import (
+    get_price_panel,
+    get_prices,
+    get_security_master,
+    get_universe,
+)
+
+symbols = get_universe("2020-01-02")
+prices = get_prices("2020-01-02", symbols[:100])
+panel = get_price_panel("2020-01-02", "2020-03-31")
+metadata = get_security_master(symbols[:100])
 ```
 
-## Main Local Output
+Direct DuckDB:
 
-```text
-data/pit_market.duckdb
+```sql
+SELECT
+    p.date,
+    p.symbol,
+    sm.asset_type,
+    sm.sector,
+    p.close,
+    l.adv20,
+    l.next_open
+FROM universe_membership u
+JOIN daily_prices p USING (date, symbol)
+JOIN liquidity_metrics l USING (date, symbol)
+LEFT JOIN security_master sm USING (symbol)
+WHERE u.date = DATE '2020-01-02'
+  AND u.universe_name = 'US_DAILY_SURVIVORSHIP_REDUCED_V1'
+ORDER BY p.symbol;
 ```
 
-Core tables:
+## Source Model
 
-| Table | Purpose |
-| --- | --- |
-| `daily_prices` | Canonical OHLCV daily bars |
-| `symbol_master` | Source coverage and symbol ranges |
-| `security_master` | Asset type, ETF flag, exchange, name, sector, and industry |
-| `liquidity_metrics` | Dollar volume, ADV20, next open |
-| `universe_membership` | Date-by-date backtest universe |
-| `universe_stats` | Daily sanity metrics |
+NEUTRALIZER uses SEC as the primary delisting discovery spine. SEC identifies delisting events and issuer CIKs; price collectors then recover the available OHLCV history for mapped tickers.
+
+| Layer | Source | Role |
+| --- | --- | --- |
+| Delisting discovery | SEC Form 25/25-NSE filings | Finds delisting events and issuer CIKs |
+| Ticker mapping | SEC Form 3/4/5 structured data | Maps CIKs to historical tickers where available |
+| Delisted OHLCV recovery | Yahoo chart API probe | Pulls daily bars for recoverable SEC candidate tickers |
+| Active OHLCV baseline | Yahoo chart API | Pulls current listed-symbol daily bars |
+| Supplemental delisted OHLCV | Kaggle Arandkei archive | Adds delisted historical bars available in the archive |
+| Metadata enrichment | FMP delisted and profile endpoints | Adds delisting metadata, sector, and industry when plan limits allow |
+| Supplemental OHLCV | Stooq bulk archive | Attempted when available; pipeline continues without it |
+
+Yahoo chart responses are accepted only when metadata identifies a USD `EQUITY` or `ETF`; non-equity, non-USD, and placeholder `YHD` matches are rejected before normalization.
+
+## Quality Controls
+
+The daily audit fails if any hard data-quality rule breaks:
+
+| Check | Expected |
+| --- | ---: |
+| Duplicate `(date, symbol)` keys | 0 |
+| Null required OHLCV fields | 0 |
+| Non-positive OHLC rows | 0 |
+| Negative volume rows | 0 |
+| `high < low` rows | 0 |
+| `open`/`close` outside `[low, high]` rows | 0 |
+| Future-dated rows | 0 |
+| Weekend rows | 0 |
+| Missing joins to symbol/security/liquidity/universe tables | 0 |
+
+Latest validation:
+
+```text
+Ran 11 tests
+OK
+
+[audit] OK
+```
 
 ## Quick Start
 
@@ -115,12 +207,6 @@ Set local secrets:
 powershell -ExecutionPolicy Bypass -File .\scripts\setup_secrets.ps1
 ```
 
-Check setup:
-
-```powershell
-python -m src.run_pipeline --step check
-```
-
 Run a full rebuild:
 
 ```powershell
@@ -133,65 +219,52 @@ Run daily maintenance:
 powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
 ```
 
-## Backtest Query Contract
+Incrementally enrich sector and industry metadata when FMP quota allows:
 
-Use `src/db/query_examples.py`:
-
-```python
-from src.db.query_examples import get_universe, get_prices, get_price_panel
-from src.db.query_examples import get_security_master
-
-symbols = get_universe("2020-01-02")
-prices = get_prices("2020-01-02", symbols[:100])
-panel = get_price_panel("2020-01-02", "2020-03-31")
-metadata = get_security_master(symbols[:100])
+```powershell
+$env:NEUTRALIZER_FMP_PROFILE_LIMIT="500"
+powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
 ```
 
-## Source Model
+## Repository Layout
 
-NEUTRALIZER uses SEC as the primary delisting discovery spine. Price bars are then recovered from available historical-price sources.
+```text
+assets/brand/               NEUTRALIZER CI assets
+docs/                       Architecture, data dictionary, maintenance notes
+scripts/                    Operator scripts
+src/collectors/             Source collectors
+src/normalize/              Canonical prices, symbol master, and security master
+src/universe/               Liquidity metrics and daily universe
+src/db/                     DuckDB build and query helpers
+src/tools/                  Audits and prerequisite checks
+tests/                      Unit tests
+data/                       Local-only generated data, ignored by Git
+```
 
-| Layer | Source | Role |
-| --- | --- | --- |
-| Delisting discovery | SEC Form 25/25-NSE filings | Finds delisting events and issuer CIKs. |
-| Ticker mapping | SEC Form 3/4/5 structured data | Maps CIKs to historical tickers where available. |
-| Delisted OHLCV recovery | Yahoo chart API probe | Pulls daily bars for recoverable SEC candidate tickers. |
-| Active OHLCV baseline | Yahoo chart API | Pulls current listed-symbol daily bars. |
-| Supplemental delisted OHLCV | Kaggle Arandkei archive | Adds delisted historical bars available in the archive. |
-| Metadata enrichment | FMP delisted metadata | Optional enrichment, limited by API plan. |
-| Sector/industry enrichment | FMP profile metadata | Optional incremental profile cache, limited by API plan. |
-| Supplemental OHLCV | Stooq bulk archive | Attempted when available; pipeline continues without it. |
-
-Yahoo chart responses are accepted only when metadata identifies a USD `EQUITY` or `ETF`; non-equity, non-USD, and placeholder `YHD` matches are rejected before normalization.
-
-## Maintenance
-
-See:
+## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Data Dictionary](docs/DATA_DICTIONARY.md)
 - [Daily Maintenance](docs/MAINTENANCE.md)
 - [Coverage Notes](docs/COVERAGE.md)
 
-## Validation
+## Boundaries
 
-```powershell
-python -m unittest discover -s tests
-python -m src.tools.audit_daily_prices
-```
+NEUTRALIZER is a research-grade local data product, not a CRSP, Norgate, Bloomberg, or Refinitiv replacement.
 
-Latest validation:
+Known limitations:
 
-```text
-Ran 11 tests
-OK
-```
+- Not every historical delisted U.S. security is recoverable from public/free sources.
+- Ticker reuse can still require manual investigation when metadata is weak.
+- Yahoo adjusted historical prices and vendor volume can distort dollar-volume estimates for heavily split-adjusted securities.
+- Sector and industry coverage grows incrementally under FMP plan limits.
+- This is daily equity/ETF infrastructure, not intraday, options, fundamentals, or live trading infrastructure.
 
 ## Data Policy
 
-Generated market data, raw vendor/API responses, DuckDB files, and secrets are intentionally ignored by Git.
+Do not commit generated market data, raw vendor/API responses, database files, or secrets.
 
-Do not commit:
+Ignored local artifacts include:
 
 - `.env.local`
 - `data/pit_market.duckdb`
