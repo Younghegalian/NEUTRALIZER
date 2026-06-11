@@ -52,6 +52,31 @@ class UniverseTest(unittest.TestCase):
         self.assertEqual(aaa_last["adv20"], 100)
         self.assertEqual(bbb_last["adv20"], 20_000)
 
+    def test_traded_days_requires_positive_volume(self) -> None:
+        dates = pd.date_range("2020-01-01", periods=20, freq="D")
+        prices = pd.DataFrame(
+            [
+                {
+                    "date": date.date(),
+                    "symbol": "ZERO",
+                    "vendor_symbol": "ZERO",
+                    "open": 10,
+                    "high": 10,
+                    "low": 10,
+                    "close": 10,
+                    "volume": 0 if i < 10 else 100,
+                    "adjusted_close": None,
+                    "source": "stooq",
+                    "is_delisted_source": False,
+                }
+                for i, date in enumerate(dates)
+            ]
+        )
+
+        liquidity = compute_liquidity_metrics_df(prices)
+
+        self.assertEqual(int(liquidity.iloc[-1]["traded_days_20"]), 10)
+
     def test_universe_exclusions(self) -> None:
         liquidity = pd.DataFrame(
             [
@@ -119,4 +144,3 @@ class UniverseTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -34,7 +34,8 @@ The script:
 7. Rebuilds normalized parquet.
 8. Recomputes liquidity metrics and universe tables.
 9. Rebuilds `data/pit_market.duckdb`.
-10. Runs unit tests.
+10. Audits daily-bar grain, nulls, OHLC validity, date validity, and table integrity.
+11. Runs unit tests.
 
 ## Faster Manual Runs
 
@@ -63,4 +64,10 @@ python -m src.run_pipeline --step normalize --start-date 2010-01-01 --end-date t
 python -m src.run_pipeline --step liquidity
 python -m src.run_pipeline --step universe
 python -m src.run_pipeline --step duckdb
+```
+
+Audit the current DuckDB daily bars:
+
+```powershell
+python -m src.tools.audit_daily_prices
 ```

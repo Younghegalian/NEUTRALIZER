@@ -19,14 +19,14 @@ Latest local build produced:
 | Area | Value |
 | --- | ---: |
 | Final DuckDB | `data/pit_market.duckdb` |
-| Daily price rows | 24,767,353 |
-| Total symbols | 12,412 |
+| Daily price rows | 23,965,894 |
+| Total symbols | 11,803 |
 | Active-source symbols | 10,021 |
-| Delisted-source symbols | 2,391 |
+| Delisted-source symbols | 1,782 |
 | Price date range | 2010-01-01 to 2026-06-11 |
-| Universe date range | 2010-01-21 to 2026-06-10 |
-| Universe memberships | 14,070,921 |
-| Median daily universe count | 3,177.5 |
+| Universe date range | 2010-01-25 to 2026-06-09 |
+| Universe memberships | 13,740,815 |
+| Median daily universe count | 3,053 |
 
 SEC-led delisting discovery:
 
@@ -35,16 +35,17 @@ SEC-led delisting discovery:
 | SEC Form 25/25-NSE filings | 28,144 |
 | SEC delisting CIKs | 8,731 |
 | SEC candidate tickers | 10,962 |
-| Yahoo delisted probe attempts from SEC candidates | 9,133 |
-| Yahoo delisted probe successes | 2,413 |
+| Yahoo delisted raw cache inspected | 4,441 |
+| Yahoo equity/ETF/USD cache accepted | 1,813 |
+| Yahoo non-equity/non-USD/empty cache rejected | 2,628 |
 
 Price-bar source coverage:
 
 | Source | Rows | Symbols | Range |
 | --- | ---: | ---: | --- |
-| `yahoo_fallback` | 20,282,658 | 10,021 | 2010-01-04 to 2026-06-10 |
-| `yahoo_delisted_probe` | 4,451,293 | 2,376 | 2010-01-04 to 2026-06-11 |
-| `kaggle_arandkei_delisted` | 33,402 | 15 | 2010-01-01 to 2026-02-23 |
+| `yahoo_fallback` | 20,282,646 | 10,021 | 2010-01-04 to 2026-06-10 |
+| `yahoo_delisted_probe` | 3,649,850 | 1,767 | 2010-01-04 to 2026-06-11 |
+| `kaggle_arandkei_delisted` | 33,398 | 15 | 2010-01-01 to 2026-02-23 |
 
 ## What This Is
 
@@ -147,6 +148,8 @@ NEUTRALIZER uses SEC as the primary delisting discovery spine. Price bars are th
 | Metadata enrichment | FMP delisted metadata | Optional enrichment, limited by API plan. |
 | Supplemental OHLCV | Stooq bulk archive | Attempted when available; pipeline continues without it. |
 
+Yahoo chart responses are accepted only when metadata identifies a USD `EQUITY` or `ETF`; non-equity, non-USD, and placeholder `YHD` matches are rejected before normalization.
+
 ## Maintenance
 
 See:
@@ -160,12 +163,13 @@ See:
 
 ```powershell
 python -m unittest discover -s tests
+python -m src.tools.audit_daily_prices
 ```
 
 Latest validation:
 
 ```text
-Ran 6 tests
+Ran 10 tests
 OK
 ```
 

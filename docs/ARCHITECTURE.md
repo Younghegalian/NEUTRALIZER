@@ -22,7 +22,7 @@ SEC delisting discovery
 | Collector | Output | Notes |
 | --- | --- | --- |
 | `sec_delisting_collector.py` | SEC staging parquet files | Form 25/25-NSE candidates plus Form 3/4/5 ticker map. |
-| `yahoo_delisted_probe` | `data/staging/yahoo_delisted_probe_daily_prices.parquet` | Recovered daily bars for SEC delisting candidates. |
+| `yahoo_delisted_probe` | `data/staging/yahoo_delisted_probe_daily_prices.parquet` | Recovered daily bars for SEC delisting candidates; accepts only USD `EQUITY` and `ETF` Yahoo metadata. |
 | `yahoo_fallback_downloader.py` | `data/staging/yahoo_fallback_daily_prices.parquet` | Active current-symbol daily bars. |
 | `kaggle_delisted_loader.py` | `data/staging/kaggle_delisted_daily_prices.parquet` | Arandkei archive loader. |
 | `fmp_delisted_metadata.py` | `data/staging/fmp_delisted_metadata.parquet` | Optional metadata enrichment. |
@@ -44,6 +44,8 @@ Source priority:
 3. `yahoo_delisted_probe`
 4. `kaggle_arandkei_delisted`
 
+Price validation rejects rows with null OHLC, non-positive OHLC, negative volume, `high < low`, or `open`/`close` outside the `[low, high]` range.
+
 ## Universe
 
 The universe is a daily table, not a fixed symbol list.
@@ -56,6 +58,8 @@ adv20 >= 1,000,000
 traded_days_20 >= 15
 has_next_open == true
 ```
+
+`traded_days_20` counts only rows with positive volume.
 
 Universe name:
 

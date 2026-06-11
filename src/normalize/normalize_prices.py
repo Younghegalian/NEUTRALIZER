@@ -18,6 +18,7 @@ from src.utils import (
 
 
 NUMERIC_COLUMNS = ["open", "high", "low", "close", "volume", "adjusted_close"]
+OHLC_BOUNDS_TOLERANCE = 1e-8
 
 
 def _ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -65,14 +66,14 @@ def _row_reasons(row: pd.Series) -> list[str]:
     if not pd.isna(row["high"]) and not pd.isna(row["low"]) and row["high"] < row["low"]:
         reasons.append("high < low")
 
-    if not pd.isna(row["open"]) and not pd.isna(row["high"]) and row["open"] > row["high"] * 1.5:
-        reasons.append("open > high * 1.5")
-    if not pd.isna(row["open"]) and not pd.isna(row["low"]) and row["open"] < row["low"] * 0.5:
-        reasons.append("open < low * 0.5")
-    if not pd.isna(row["close"]) and not pd.isna(row["high"]) and row["close"] > row["high"] * 1.5:
-        reasons.append("close > high * 1.5")
-    if not pd.isna(row["close"]) and not pd.isna(row["low"]) and row["close"] < row["low"] * 0.5:
-        reasons.append("close < low * 0.5")
+    if not pd.isna(row["open"]) and not pd.isna(row["high"]) and row["open"] > row["high"] + OHLC_BOUNDS_TOLERANCE:
+        reasons.append("open > high")
+    if not pd.isna(row["open"]) and not pd.isna(row["low"]) and row["open"] < row["low"] - OHLC_BOUNDS_TOLERANCE:
+        reasons.append("open < low")
+    if not pd.isna(row["close"]) and not pd.isna(row["high"]) and row["close"] > row["high"] + OHLC_BOUNDS_TOLERANCE:
+        reasons.append("close > high")
+    if not pd.isna(row["close"]) and not pd.isna(row["low"]) and row["close"] < row["low"] - OHLC_BOUNDS_TOLERANCE:
+        reasons.append("close < low")
 
     return reasons
 
@@ -95,10 +96,10 @@ def split_bad_rows(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         "close <= 0": df["close"].le(0),
         "volume < 0": df["volume"].lt(0),
         "high < low": df["high"].lt(df["low"]),
-        "open > high * 1.5": df["open"].gt(df["high"] * 1.5),
-        "open < low * 0.5": df["open"].lt(df["low"] * 0.5),
-        "close > high * 1.5": df["close"].gt(df["high"] * 1.5),
-        "close < low * 0.5": df["close"].lt(df["low"] * 0.5),
+        "open > high": df["open"].gt(df["high"] + OHLC_BOUNDS_TOLERANCE),
+        "open < low": df["open"].lt(df["low"] - OHLC_BOUNDS_TOLERANCE),
+        "close > high": df["close"].gt(df["high"] + OHLC_BOUNDS_TOLERANCE),
+        "close < low": df["close"].lt(df["low"] - OHLC_BOUNDS_TOLERANCE),
     }
     bad_mask = pd.Series(False, index=df.index)
     for mask in masks.values():

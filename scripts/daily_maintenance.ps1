@@ -74,6 +74,7 @@ foreach ($path in @($secIndex, $secForm345)) {
 & $Python -m src.run_pipeline --step liquidity
 & $Python -m src.run_pipeline --step universe
 & $Python -m src.run_pipeline --step duckdb
+& $Python -m src.tools.audit_daily_prices
 & $Python -m unittest discover -s tests
 
 Write-Host "NEUTRALIZER daily maintenance complete."

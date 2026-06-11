@@ -20,6 +20,8 @@ YAHOO_HEADERS = {
     "Accept": "application/json,text/plain,*/*",
     "Accept-Language": "en-US,en;q=0.9",
 }
+YAHOO_ALLOWED_INSTRUMENT_TYPES = {"EQUITY", "ETF"}
+YAHOO_ALLOWED_CURRENCIES = {"USD"}
 
 
 def _unix_day(value: date) -> int:
@@ -43,6 +45,12 @@ def _parse_chart_payload(
         return empty_frame(config.CANONICAL_PRICE_COLUMNS)
 
     result = results[0]
+    meta = result.get("meta", {})
+    instrument_type = str(meta.get("instrumentType") or "").upper()
+    currency = str(meta.get("currency") or "").upper()
+    if instrument_type not in YAHOO_ALLOWED_INSTRUMENT_TYPES or currency not in YAHOO_ALLOWED_CURRENCIES:
+        return empty_frame(config.CANONICAL_PRICE_COLUMNS)
+
     timestamps = result.get("timestamp") or []
     quote = (result.get("indicators", {}).get("quote") or [{}])[0]
     adjclose = (result.get("indicators", {}).get("adjclose") or [{}])[0].get("adjclose")

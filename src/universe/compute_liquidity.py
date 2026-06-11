@@ -22,7 +22,7 @@ def compute_liquidity_metrics_df(daily_prices: pd.DataFrame) -> pd.DataFrame:
     grouped = work.groupby("symbol", group_keys=False)
     work["adv20"] = grouped["dollar_volume"].transform(lambda s: s.rolling(20, min_periods=1).mean())
     work["traded_days_20"] = grouped["volume"].transform(
-        lambda s: s.notna().rolling(20, min_periods=1).sum()
+        lambda s: s.gt(0).rolling(20, min_periods=1).sum()
     )
     work["next_open"] = grouped["open"].shift(-1)
     work["has_next_open"] = work["next_open"].notna()

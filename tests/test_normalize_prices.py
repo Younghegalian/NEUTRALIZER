@@ -79,6 +79,32 @@ class NormalizePricesTest(unittest.TestCase):
         self.assertEqual(len(duplicate_report), 1)
         self.assertEqual(duplicate_report.iloc[0]["selected_source"], "stooq")
 
+    def test_rejects_ohlc_outside_high_low(self) -> None:
+        raw = pd.DataFrame(
+            [
+                {
+                    "date": "2020-01-02",
+                    "symbol": "BAD",
+                    "vendor_symbol": "BAD",
+                    "open": 9,
+                    "high": 10,
+                    "low": 10,
+                    "close": 11,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "yahoo_fallback",
+                    "is_delisted_source": False,
+                }
+            ]
+        )
+
+        daily_prices, _symbol_master, _duplicate_report, bad_rows = normalize_price_frame([raw])
+
+        self.assertTrue(daily_prices.empty)
+        self.assertEqual(len(bad_rows), 1)
+        self.assertIn("open < low", bad_rows.iloc[0]["bad_reason"])
+        self.assertIn("close > high", bad_rows.iloc[0]["bad_reason"])
+
 
 if __name__ == "__main__":
     unittest.main()
