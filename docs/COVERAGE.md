@@ -2,6 +2,11 @@
 
 NEUTRALIZER is survivorship-reduced, not survivorship-bias-free.
 
+Coverage is split into two different questions:
+
+- SEC-led discovery coverage: how many delisting events, CIKs, and candidate tickers were found.
+- Price-bar recovery coverage: how many of those candidates could actually produce daily OHLCV rows from Yahoo, Kaggle, or other price sources.
+
 ## Latest Local Coverage
 
 | Metric | Value |
@@ -29,4 +34,3 @@ NEUTRALIZER is survivorship-reduced, not survivorship-bias-free.
 - `data/research/yahoo_delisted_probe_coverage.parquet`
 - `data/normalized/duplicate_report.parquet`
 - `data/normalized/bad_rows_report.parquet`
-

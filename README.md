@@ -28,7 +28,17 @@ Latest local build produced:
 | Universe memberships | 14,070,921 |
 | Median daily universe count | 3,177.5 |
 
-Source coverage:
+SEC-led delisting discovery:
+
+| Area | Value |
+| --- | ---: |
+| SEC Form 25/25-NSE filings | 28,144 |
+| SEC delisting CIKs | 8,731 |
+| SEC candidate tickers | 10,962 |
+| Yahoo delisted probe attempts from SEC candidates | 9,133 |
+| Yahoo delisted probe successes | 2,413 |
+
+Price-bar source coverage:
 
 | Source | Rows | Symbols | Range |
 | --- | ---: | ---: | --- |
@@ -123,15 +133,19 @@ prices = get_prices("2020-01-02", symbols[:100])
 panel = get_price_panel("2020-01-02", "2020-03-31")
 ```
 
-## Data Sources
+## Source Model
 
-- Yahoo chart API for active current-symbol daily bars.
-- SEC Form 25/25-NSE filings for delisting candidates.
-- SEC Form 3/4/5 structured data for CIK-to-historical-ticker mapping.
-- Yahoo chart API delisted probe for recoverable SEC delisting candidates.
-- Kaggle Arandkei delisted archive for additional delisted historical bars.
-- FMP delisted metadata as optional enrichment.
-- Stooq bulk collection is attempted but not required when unavailable.
+NEUTRALIZER uses SEC as the primary delisting discovery spine. Price bars are then recovered from available historical-price sources.
+
+| Layer | Source | Role |
+| --- | --- | --- |
+| Delisting discovery | SEC Form 25/25-NSE filings | Finds delisting events and issuer CIKs. |
+| Ticker mapping | SEC Form 3/4/5 structured data | Maps CIKs to historical tickers where available. |
+| Delisted OHLCV recovery | Yahoo chart API probe | Pulls daily bars for recoverable SEC candidate tickers. |
+| Active OHLCV baseline | Yahoo chart API | Pulls current listed-symbol daily bars. |
+| Supplemental delisted OHLCV | Kaggle Arandkei archive | Adds delisted historical bars available in the archive. |
+| Metadata enrichment | FMP delisted metadata | Optional enrichment, limited by API plan. |
+| Supplemental OHLCV | Stooq bulk archive | Attempted when available; pipeline continues without it. |
 
 ## Maintenance
 
@@ -167,4 +181,3 @@ Do not commit:
 - `data/staging/**`
 - `data/normalized/**`
 - `data/research/**`
-

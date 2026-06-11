@@ -2,8 +2,12 @@
 
 NEUTRALIZER builds a local daily-bar research database in deterministic stages.
 
+The delisting universe is SEC-led. SEC filings identify delisting events and issuer CIKs, SEC Form 3/4/5 data helps map those issuers back to tickers, and then price-bar collectors recover whatever OHLCV history is available for those tickers.
+
 ```text
-source collectors
+SEC delisting discovery
+  -> SEC candidate tickers
+  -> price-bar collectors
   -> staging parquet
   -> canonical daily_prices
   -> symbol_master
@@ -17,12 +21,12 @@ source collectors
 
 | Collector | Output | Notes |
 | --- | --- | --- |
-| `stooq_downloader.py` | `data/staging/stooq_daily_prices.parquet` | Bulk archive attempted; pipeline continues when unavailable. |
-| `yahoo_fallback_downloader.py` | `data/staging/yahoo_fallback_daily_prices.parquet` | Active current-symbol daily bars. |
 | `sec_delisting_collector.py` | SEC staging parquet files | Form 25/25-NSE candidates plus Form 3/4/5 ticker map. |
 | `yahoo_delisted_probe` | `data/staging/yahoo_delisted_probe_daily_prices.parquet` | Recovered daily bars for SEC delisting candidates. |
+| `yahoo_fallback_downloader.py` | `data/staging/yahoo_fallback_daily_prices.parquet` | Active current-symbol daily bars. |
 | `kaggle_delisted_loader.py` | `data/staging/kaggle_delisted_daily_prices.parquet` | Arandkei archive loader. |
 | `fmp_delisted_metadata.py` | `data/staging/fmp_delisted_metadata.parquet` | Optional metadata enrichment. |
+| `stooq_downloader.py` | `data/staging/stooq_daily_prices.parquet` | Bulk archive attempted; pipeline continues when unavailable. |
 
 ## Canonical Merge
 
@@ -58,4 +62,3 @@ Universe name:
 ```text
 US_DAILY_SURVIVORSHIP_REDUCED_V1
 ```
-
