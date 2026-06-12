@@ -12,6 +12,7 @@ from src.universe.build_backtest_universe import (
     select_delisting_events,
 )
 from src.universe.build_delisting_outcomes import build_delisting_outcomes_df
+from src.universe.build_terminal_event_validity import build_terminal_event_validity_df
 from src.universe.build_universe import build_universe_df
 from src.universe.compute_liquidity import compute_liquidity_metrics_df
 
@@ -83,6 +84,58 @@ class UniverseTest(unittest.TestCase):
         liquidity = compute_liquidity_metrics_df(prices)
 
         self.assertEqual(int(liquidity.iloc[-1]["traded_days_20"]), 10)
+
+    def test_next_open_requires_global_next_calendar_bar(self) -> None:
+        prices = pd.DataFrame(
+            [
+                {
+                    "date": "2020-01-01",
+                    "symbol": "GAPPY",
+                    "vendor_symbol": "GAPPY",
+                    "open": 10,
+                    "high": 10,
+                    "low": 10,
+                    "close": 10,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "stooq",
+                    "is_delisted_source": False,
+                },
+                {
+                    "date": "2020-01-03",
+                    "symbol": "GAPPY",
+                    "vendor_symbol": "GAPPY",
+                    "open": 12,
+                    "high": 12,
+                    "low": 12,
+                    "close": 12,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "stooq",
+                    "is_delisted_source": False,
+                },
+                {
+                    "date": "2020-01-02",
+                    "symbol": "CAL",
+                    "vendor_symbol": "CAL",
+                    "open": 20,
+                    "high": 20,
+                    "low": 20,
+                    "close": 20,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "stooq",
+                    "is_delisted_source": False,
+                },
+            ],
+            columns=config.CANONICAL_PRICE_COLUMNS,
+        )
+
+        liquidity = compute_liquidity_metrics_df(prices)
+        row = liquidity[(liquidity["symbol"] == "GAPPY") & (liquidity["date"] == pd.Timestamp("2020-01-01"))].iloc[0]
+
+        self.assertTrue(pd.isna(row["next_open"]))
+        self.assertFalse(row["has_next_open"])
 
     def test_universe_exclusions(self) -> None:
         liquidity = pd.DataFrame(
@@ -403,6 +456,64 @@ class UniverseTest(unittest.TestCase):
         self.assertEqual(row["exit_price"], 2)
         self.assertAlmostEqual(row["exit_return"], -0.6)
         self.assertEqual(row["outcome_type"], "merger_or_acquisition")
+
+    def test_terminal_event_validity_excludes_symbols_with_later_universe_membership(self) -> None:
+        terminal_events = pd.DataFrame(
+            [
+                {
+                    "symbol": "NOISY",
+                    "event_date": "2020-01-02",
+                    "terminal_date": "2020-01-02",
+                    "terminal_price": 10,
+                    "previous_close": 9,
+                    "terminal_return": 0.111,
+                    "has_terminal_price": True,
+                    "price_source": "test",
+                    "event_source": "sec_form25_date_filed",
+                    "event_confidence": "proxy",
+                    "terminal_policy": "test",
+                    "notes": "test",
+                },
+                {
+                    "symbol": "CLEAN",
+                    "event_date": "2020-01-02",
+                    "terminal_date": "2020-01-02",
+                    "terminal_price": 10,
+                    "previous_close": 9,
+                    "terminal_return": 0.111,
+                    "has_terminal_price": True,
+                    "price_source": "test",
+                    "event_source": "sec_form25_date_filed",
+                    "event_confidence": "proxy",
+                    "terminal_policy": "test",
+                    "notes": "test",
+                },
+            ],
+            columns=config.TERMINAL_EVENTS_COLUMNS,
+        )
+        universe_membership = pd.DataFrame(
+            [
+                {"date": "2020-01-03", "universe_name": config.UNIVERSE_NAME, "symbol": "NOISY", "reason": "base"},
+            ],
+            columns=config.UNIVERSE_COLUMNS,
+        )
+
+        validity, valid_events = build_terminal_event_validity_df(
+            terminal_events=terminal_events,
+            daily_prices=pd.DataFrame(columns=config.CANONICAL_PRICE_COLUMNS),
+            universe_membership=universe_membership,
+            backtest_universe_membership=pd.DataFrame(columns=config.BACKTEST_UNIVERSE_COLUMNS),
+            delisting_outcomes=pd.DataFrame(columns=config.DELISTING_OUTCOMES_COLUMNS),
+        )
+
+        self.assertFalse(
+            bool(validity.loc[validity["symbol"] == "NOISY", "is_valid_liquidation_event"].iloc[0])
+        )
+        self.assertIn(
+            "base_universe_after_terminal_date",
+            validity.loc[validity["symbol"] == "NOISY", "invalidation_reason"].iloc[0],
+        )
+        self.assertEqual(set(valid_events["symbol"]), {"CLEAN"})
 
 
 if __name__ == "__main__":

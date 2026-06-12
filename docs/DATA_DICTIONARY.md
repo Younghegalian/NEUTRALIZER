@@ -58,8 +58,8 @@
 | `quality_adv20` | Symbol-specific rolling 20-day mean quality-filtered dollar volume used by the universe builder. |
 | `traded_days_20` | Positive-volume days in rolling 20-day window. |
 | `quality_traded_days_20` | Positive-volume non-suspect days in rolling 20-day window used by the universe builder. |
-| `next_open` | Next available open for the same symbol. |
-| `has_next_open` | True when `next_open` is available and the next row is not price-quality-suspect. |
+| `next_open` | Open on the next global FONA trading-calendar date for the same symbol. Missing if the symbol has no bar on that next date. |
+| `has_next_open` | True when a positive `next_open` exists on the next global trading-calendar date and that next row is not price-quality-suspect. |
 | `is_price_quality_suspect` | True for rows flagged as unsafe for tradable universe construction. |
 
 ## `price_quality_flags`
@@ -147,6 +147,53 @@
 | `policy` | Exit-value policy used to build the row. |
 | `evidence` | Short text snippet supporting outcome classification. |
 | `notes` | Exit-value caveat. |
+
+## `terminal_event_validity`
+
+| Column | Description |
+| --- | --- |
+| `symbol` | Internal symbol. |
+| `event_date` | Selected delisting event date. |
+| `terminal_date` | Terminal price date from `terminal_events`. |
+| `has_terminal_price` | True when terminal price exists. |
+| `event_source` | Source of selected event. |
+| `event_confidence` | Confidence of selected event. |
+| `outcome_type` | Outcome type from `delisting_outcomes` when available. |
+| `has_exit_value` | True when `delisting_outcomes.exit_value` exists. |
+| `price_rows_after_terminal_date` | Count of raw price rows after `terminal_date`. |
+| `price_rows_after_event_date` | Count of raw price rows after `event_date`. |
+| `universe_rows_after_terminal_date` | Count of base universe rows after `terminal_date`. |
+| `universe_rows_after_event_date` | Count of base universe rows after `event_date`. |
+| `backtest_rows_after_event_date` | Count of lifecycle-adjusted universe rows after `event_date`; expected zero. |
+| `has_price_after_terminal_date` | True when later raw prices exist. |
+| `has_universe_after_terminal_date` | True when later base-universe membership exists. |
+| `has_universe_after_event_date` | True when later base-universe membership exists after `event_date`. |
+| `is_valid_liquidation_event` | True when the row is safe for forced-liquidation use under current FONA rules. |
+| `invalidation_reason` | Semicolon-separated reasons why the row was not considered liquidation-safe. |
+| `notes` | Validity caveat. |
+
+## `valid_terminal_events`
+
+Same core columns as `terminal_events`, plus:
+
+| Column | Description |
+| --- | --- |
+| `outcome_type` | Outcome type from `delisting_outcomes` when available. |
+| `has_exit_value` | True when `delisting_outcomes.exit_value` exists. |
+| `is_valid_liquidation_event` | Always true for this table. |
+| `validity_notes` | Validity caveat copied from `terminal_event_validity`. |
+
+## `symbol_aliases`
+
+| Column | Description |
+| --- | --- |
+| `canonical_symbol` | Symbol used by FONA price history. |
+| `alias_symbol` | Alternate ticker observed in a date range. |
+| `start_date` | First date the alias applies. |
+| `end_date` | Last date the alias applies when known. |
+| `action_type` | Action type, such as `ticker_change`. |
+| `source` | Source note for the curated alias. |
+| `notes` | Human-readable caveat. |
 
 ## `backtest_universe_membership`
 

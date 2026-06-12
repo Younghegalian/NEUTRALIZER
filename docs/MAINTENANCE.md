@@ -62,10 +62,12 @@ The script:
 11. Recomputes price-quality flags, liquidity metrics, and universe tables.
 12. Rebuilds lifecycle events, terminal events, and the lifecycle-adjusted backtest universe.
 13. Rebuilds delisting outcome enrichment from selected SEC Form 25 documents.
-14. Rebuilds `data/pit_market.duckdb`.
-15. Audits daily-bar grain, nulls, OHLC validity, date validity, price-quality exclusions, delisting outcome joins, and table integrity.
-16. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
-17. Runs unit tests.
+14. Rebuilds terminal-event validity and the liquidation-safe terminal subset.
+15. Rebuilds curated symbol aliases.
+16. Rebuilds `data/pit_market.duckdb`.
+17. Audits daily-bar grain, nulls, OHLC validity, date validity, global next-open execution, price-quality exclusions, delisting outcome joins, terminal-event validity, and table integrity.
+18. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
+19. Runs unit tests.
 
 ## Faster Manual Runs
 
@@ -98,6 +100,8 @@ python -m src.run_pipeline --step liquidity
 python -m src.run_pipeline --step universe
 python -m src.run_pipeline --step backtest_universe
 python -m src.run_pipeline --step delisting_outcomes
+python -m src.run_pipeline --step terminal_event_validity
+python -m src.run_pipeline --step symbol_aliases
 python -m src.run_pipeline --step duckdb
 ```
 

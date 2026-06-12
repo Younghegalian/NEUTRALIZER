@@ -18,7 +18,9 @@ Coverage is split into two different questions:
 | Yahoo equity/ETF/USD cache accepted | 1,813 |
 | Yahoo cache rejected by instrument/currency/empty parse | 2,628 |
 | Final delisted-source symbols | 1,782 |
-| Delisted-source universe memberships | 975,928 |
+| Final priced symbols | 11,813 |
+| Forced ETF label-seed symbols recovered | 10 |
+| Delisted-source universe memberships | 948,521 |
 
 ## Backtest Lifecycle Coverage
 
@@ -27,13 +29,14 @@ FONA keeps raw prices untouched and applies delisting policy in separate backtes
 - `security_events`: lifecycle events from price coverage, FMP metadata, and SEC Form 25/25-NSE filings.
 - `terminal_events`: last available close on or before selected delisting events; no artificial zero-price fill.
 - `delisting_outcomes`: selected SEC Form 25 document evidence, exit classification, effective date, observed exit price, and usable cash consideration where extractable.
+- `terminal_event_validity` and `valid_terminal_events`: liquidation-safety layer that excludes terminal hints when later universe membership makes them unsafe as hard delisting events.
 - `backtest_universe_membership`: `US_DAILY_LIFECYCLE_ADJUSTED_V2`, excluding dates after selected delisting events.
 
 Latest lifecycle build:
 
 | Metric | Value |
 | --- | ---: |
-| Security lifecycle events | 13,635 |
+| Security lifecycle events | 13,645 |
 | Selected terminal delisting events | 1,778 |
 | Terminal events with price | 1,013 |
 | Delisting outcomes | 1,778 |
@@ -43,9 +46,12 @@ Latest lifecycle build:
 | Outcomes with extracted cash consideration | 16 |
 | Outcomes with SEC effective date | 286 |
 | Unknown/not-enriched outcome classifications | 750 |
+| Valid liquidation-safe terminal events | 610 |
+| Raw terminal events with later universe membership | 403 |
+| Raw terminal events with later price rows | 957 |
 | Zero terminal prices | 0 |
-| Lifecycle-adjusted universe memberships | 13,134,975 |
-| Base universe rows removed by lifecycle policy | 578,175 |
+| Lifecycle-adjusted universe memberships | 12,865,749 |
+| Base universe rows removed by lifecycle policy | 566,295 |
 | Membership rows after selected delisting event | 0 |
 
 Delisting events are applied only to symbols with delisted-source price coverage. This reduces ticker-reuse false positives, but it also means unpriced delisting candidates remain coverage gaps rather than simulated zero-price rows.
@@ -76,9 +82,9 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 
 | Metric | Value |
 | --- | ---: |
-| Security master symbols | 11,803 |
+| Security master symbols | 11,813 |
 | Stock-classified symbols | 6,921 |
-| ETF-classified symbols | 4,861 |
+| ETF-classified symbols | 4,871 |
 | Unknown/fund symbols | 21 |
 | CIK-enriched symbols | 7,458 |
 | SIC-enriched symbols | 7,152 |
@@ -95,6 +101,8 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 | Price quality flagged symbols | 242 |
 | Price-quality-suspect rows in base universe | 0 |
 | Price-quality-suspect rows in backtest universe | 0 |
+| Global-calendar next-open mismatches in base universe | 0 |
+| Invalid rows inside `valid_terminal_events` | 0 |
 | Duplicate `(date, symbol)` keys | 0 |
 | Null required OHLCV fields | 0 |
 | Non-positive OHLC rows | 0 |
@@ -111,6 +119,7 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 - Yahoo may remove delisted symbols, return no data, or expose OTC successor symbols.
 - Ticker reuse can contaminate historical joins when metadata is weak.
 - SEC Form 25/25-NSE filing dates are proxies when no FMP `delistedDate` is available.
+- `terminal_events` is a raw terminal hint table. Use `valid_terminal_events` when a backtest engine needs hard forced-liquidation events.
 - Terminal event prices are last available closes, not CRSP-style delisting returns.
 - `delisting_outcomes.exit_value` improves some cash-merger exits, but it is still not a complete CRSP-style delisting-return replacement. Mixed cash/stock deals, stock-for-stock mergers, and bankruptcies often need manual or premium-source enrichment.
 - Kaggle and FMP coverage depends on available plan/data limits.
@@ -127,6 +136,9 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 - `data/research/security_events.parquet`
 - `data/research/terminal_events.parquet`
 - `data/research/delisting_outcomes.parquet`
+- `data/research/terminal_event_validity.parquet`
+- `data/research/valid_terminal_events.parquet`
+- `data/research/symbol_aliases.parquet`
 - `data/research/backtest_universe_membership.parquet`
 - `data/normalized/duplicate_report.parquet`
 - `data/normalized/bad_rows_report.parquet`

@@ -82,9 +82,23 @@ def compute_liquidity_metrics_df(daily_prices: pd.DataFrame) -> pd.DataFrame:
         work["volume"].gt(0)
         & not_suspect
     ).groupby(work["symbol"]).transform(lambda s: s.rolling(20, min_periods=1).sum())
-    work["next_open"] = grouped["open"].shift(-1)
-    next_is_suspect = grouped["is_price_quality_suspect"].shift(-1).fillna(False)
-    work["has_next_open"] = work["next_open"].notna() & next_is_suspect.eq(False)
+    calendar = work[["date"]].drop_duplicates().sort_values("date").reset_index(drop=True)
+    calendar["next_date"] = calendar["date"].shift(-1)
+    work = work.merge(calendar, on="date", how="left")
+    next_rows = work[["symbol", "date", "open", "is_price_quality_suspect"]].rename(
+        columns={
+            "date": "next_date",
+            "open": "next_open",
+            "is_price_quality_suspect": "next_is_price_quality_suspect",
+        }
+    )
+    work = work.merge(next_rows, on=["symbol", "next_date"], how="left")
+    work["next_is_price_quality_suspect"] = work["next_is_price_quality_suspect"].fillna(False)
+    work["has_next_open"] = (
+        work["next_open"].notna()
+        & work["next_open"].gt(0)
+        & work["next_is_price_quality_suspect"].eq(False)
+    )
 
     result = work[
         [

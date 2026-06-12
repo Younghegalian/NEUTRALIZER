@@ -28,6 +28,9 @@ def build_duckdb(
     security_events_path: Path = config.SECURITY_EVENTS_PATH,
     terminal_events_path: Path = config.TERMINAL_EVENTS_PATH,
     delisting_outcomes_path: Path = config.DELISTING_OUTCOMES_PATH,
+    terminal_event_validity_path: Path = config.TERMINAL_EVENT_VALIDITY_PATH,
+    valid_terminal_events_path: Path = config.VALID_TERMINAL_EVENTS_PATH,
+    symbol_aliases_path: Path = config.SYMBOL_ALIASES_PATH,
     backtest_universe_membership_path: Path = config.BACKTEST_UNIVERSE_MEMBERSHIP_PATH,
     price_quality_flags_path: Path = config.PRICE_QUALITY_FLAGS_PATH,
 ) -> Path:
@@ -46,6 +49,9 @@ def build_duckdb(
             "security_events",
             "terminal_events",
             "delisting_outcomes",
+            "terminal_event_validity",
+            "valid_terminal_events",
+            "symbol_aliases",
             "backtest_universe_membership",
             "price_quality_flags",
         ]:
@@ -209,6 +215,66 @@ def build_duckdb(
                 candidate_symbol_count BIGINT,
                 policy TEXT,
                 evidence TEXT,
+                notes TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE terminal_event_validity (
+                symbol TEXT,
+                event_date DATE,
+                terminal_date DATE,
+                has_terminal_price BOOLEAN,
+                event_source TEXT,
+                event_confidence TEXT,
+                outcome_type TEXT,
+                has_exit_value BOOLEAN,
+                price_rows_after_terminal_date BIGINT,
+                price_rows_after_event_date BIGINT,
+                universe_rows_after_terminal_date BIGINT,
+                universe_rows_after_event_date BIGINT,
+                backtest_rows_after_event_date BIGINT,
+                has_price_after_terminal_date BOOLEAN,
+                has_universe_after_terminal_date BOOLEAN,
+                has_universe_after_event_date BOOLEAN,
+                is_valid_liquidation_event BOOLEAN,
+                invalidation_reason TEXT,
+                notes TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE valid_terminal_events (
+                symbol TEXT,
+                event_date DATE,
+                terminal_date DATE,
+                terminal_price DOUBLE,
+                previous_close DOUBLE,
+                terminal_return DOUBLE,
+                has_terminal_price BOOLEAN,
+                price_source TEXT,
+                event_source TEXT,
+                event_confidence TEXT,
+                terminal_policy TEXT,
+                notes TEXT,
+                outcome_type TEXT,
+                has_exit_value BOOLEAN,
+                is_valid_liquidation_event BOOLEAN,
+                validity_notes TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE symbol_aliases (
+                canonical_symbol TEXT,
+                alias_symbol TEXT,
+                start_date DATE,
+                end_date DATE,
+                action_type TEXT,
+                source TEXT,
                 notes TEXT
             )
             """
@@ -432,6 +498,75 @@ def build_duckdb(
         )
         _insert_from_parquet(
             con,
+            "terminal_event_validity",
+            terminal_event_validity_path,
+            """
+            SELECT
+                CAST(symbol AS TEXT),
+                CAST(event_date AS DATE),
+                CAST(terminal_date AS DATE),
+                CAST(has_terminal_price AS BOOLEAN),
+                CAST(event_source AS TEXT),
+                CAST(event_confidence AS TEXT),
+                CAST(outcome_type AS TEXT),
+                CAST(has_exit_value AS BOOLEAN),
+                CAST(price_rows_after_terminal_date AS BIGINT),
+                CAST(price_rows_after_event_date AS BIGINT),
+                CAST(universe_rows_after_terminal_date AS BIGINT),
+                CAST(universe_rows_after_event_date AS BIGINT),
+                CAST(backtest_rows_after_event_date AS BIGINT),
+                CAST(has_price_after_terminal_date AS BOOLEAN),
+                CAST(has_universe_after_terminal_date AS BOOLEAN),
+                CAST(has_universe_after_event_date AS BOOLEAN),
+                CAST(is_valid_liquidation_event AS BOOLEAN),
+                CAST(invalidation_reason AS TEXT),
+                CAST(notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
+            "valid_terminal_events",
+            valid_terminal_events_path,
+            """
+            SELECT
+                CAST(symbol AS TEXT),
+                CAST(event_date AS DATE),
+                CAST(terminal_date AS DATE),
+                CAST(terminal_price AS DOUBLE),
+                CAST(previous_close AS DOUBLE),
+                CAST(terminal_return AS DOUBLE),
+                CAST(has_terminal_price AS BOOLEAN),
+                CAST(price_source AS TEXT),
+                CAST(event_source AS TEXT),
+                CAST(event_confidence AS TEXT),
+                CAST(terminal_policy AS TEXT),
+                CAST(notes AS TEXT),
+                CAST(outcome_type AS TEXT),
+                CAST(has_exit_value AS BOOLEAN),
+                CAST(is_valid_liquidation_event AS BOOLEAN),
+                CAST(validity_notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
+            "symbol_aliases",
+            symbol_aliases_path,
+            """
+            SELECT
+                CAST(canonical_symbol AS TEXT),
+                CAST(alias_symbol AS TEXT),
+                CAST(start_date AS DATE),
+                CAST(end_date AS DATE),
+                CAST(action_type AS TEXT),
+                CAST(source AS TEXT),
+                CAST(notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
             "backtest_universe_membership",
             backtest_universe_membership_path,
             """
@@ -473,6 +608,15 @@ def build_duckdb(
         con.execute("CREATE INDEX IF NOT EXISTS idx_security_events_symbol ON security_events(symbol, event_type)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_terminal_events_symbol ON terminal_events(symbol, event_date)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_delisting_outcomes_symbol ON delisting_outcomes(symbol, event_date)")
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_terminal_event_validity_symbol "
+            "ON terminal_event_validity(symbol, event_date)"
+        )
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_valid_terminal_events_symbol "
+            "ON valid_terminal_events(symbol, event_date)"
+        )
+        con.execute("CREATE INDEX IF NOT EXISTS idx_symbol_aliases_alias ON symbol_aliases(alias_symbol, start_date)")
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_backtest_universe_date_name "
             "ON backtest_universe_membership(date, universe_name)"

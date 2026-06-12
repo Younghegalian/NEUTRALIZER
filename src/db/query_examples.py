@@ -126,6 +126,50 @@ def get_delisting_outcomes(
         con.close()
 
 
+def get_valid_terminal_events(
+    symbols: list[str] | None = None,
+    db_path: Path = config.DUCKDB_PATH,
+) -> pd.DataFrame:
+    con = _connect(db_path)
+    try:
+        if not symbols:
+            return con.execute("SELECT * FROM valid_terminal_events ORDER BY event_date, symbol").fetchdf()
+        placeholders = ",".join(["?"] * len(symbols))
+        return con.execute(
+            f"""
+            SELECT *
+            FROM valid_terminal_events
+            WHERE symbol IN ({placeholders})
+            ORDER BY event_date, symbol
+            """,
+            symbols,
+        ).fetchdf()
+    finally:
+        con.close()
+
+
+def get_symbol_aliases(
+    alias_symbols: list[str] | None = None,
+    db_path: Path = config.DUCKDB_PATH,
+) -> pd.DataFrame:
+    con = _connect(db_path)
+    try:
+        if not alias_symbols:
+            return con.execute("SELECT * FROM symbol_aliases ORDER BY alias_symbol, start_date").fetchdf()
+        placeholders = ",".join(["?"] * len(alias_symbols))
+        return con.execute(
+            f"""
+            SELECT *
+            FROM symbol_aliases
+            WHERE alias_symbol IN ({placeholders})
+            ORDER BY alias_symbol, start_date
+            """,
+            alias_symbols,
+        ).fetchdf()
+    finally:
+        con.close()
+
+
 def get_price_panel(
     start_date: str,
     end_date: str,

@@ -4,6 +4,7 @@ from io import StringIO
 
 import pandas as pd
 
+from src import config
 from src.utils import normalize_symbol
 
 
@@ -58,7 +59,10 @@ def fetch_active_us_symbols(include_etfs: bool = True, liquid_equity_like: bool 
 
 
 def active_symbol_list(include_etfs: bool = True, liquid_equity_like: bool = True) -> list[str]:
-    return fetch_active_us_symbols(
+    symbols = fetch_active_us_symbols(
         include_etfs=include_etfs,
         liquid_equity_like=liquid_equity_like,
     )["symbol"].tolist()
+    if include_etfs:
+        symbols.extend(config.BACKTEST_LABEL_ETF_SEED_SYMBOLS)
+    return sorted({symbol for symbol in symbols if normalize_symbol(symbol)})

@@ -43,12 +43,44 @@ UNIVERSE_STATS_PATH = RESEARCH_DIR / "universe_stats.parquet"
 SECURITY_EVENTS_PATH = RESEARCH_DIR / "security_events.parquet"
 TERMINAL_EVENTS_PATH = RESEARCH_DIR / "terminal_events.parquet"
 DELISTING_OUTCOMES_PATH = RESEARCH_DIR / "delisting_outcomes.parquet"
+TERMINAL_EVENT_VALIDITY_PATH = RESEARCH_DIR / "terminal_event_validity.parquet"
+VALID_TERMINAL_EVENTS_PATH = RESEARCH_DIR / "valid_terminal_events.parquet"
+SYMBOL_ALIASES_PATH = RESEARCH_DIR / "symbol_aliases.parquet"
 BACKTEST_UNIVERSE_MEMBERSHIP_PATH = RESEARCH_DIR / "backtest_universe_membership.parquet"
 PRICE_QUALITY_FLAGS_PATH = RESEARCH_DIR / "price_quality_flags.parquet"
 
 DUCKDB_PATH = DATA_DIR / "pit_market.duckdb"
 UNIVERSE_NAME = "US_DAILY_SURVIVORSHIP_REDUCED_V1"
 BACKTEST_UNIVERSE_NAME = "US_DAILY_LIFECYCLE_ADJUSTED_V2"
+
+BACKTEST_LABEL_ETF_SEED_SYMBOLS = [
+    "AGG",
+    "BND",
+    "HYG",
+    "IEF",
+    "LQD",
+    "SHY",
+    "SOXX",
+    "SPLG",
+    "TIP",
+    "TLT",
+]
+
+CURATED_SYMBOL_ALIASES = [
+    {
+        "canonical_symbol": "FISV",
+        "alias_symbol": "FI",
+        "start_date": "2023-06-07",
+        "end_date": "2025-11-10",
+        "action_type": "ticker_change",
+        "source": "fiserv_ir_and_nasdaq_trader",
+        "notes": (
+            "Fiserv traded as FI after its 2023 NYSE transfer and returned to FISV "
+            "with its 2025 Nasdaq transfer. Yahoo currently exposes the continuous "
+            "history under FISV."
+        ),
+    },
+]
 
 CANONICAL_PRICE_COLUMNS = [
     "date",
@@ -201,6 +233,42 @@ DELISTING_OUTCOMES_COLUMNS = [
     "candidate_symbol_count",
     "policy",
     "evidence",
+    "notes",
+]
+TERMINAL_EVENT_VALIDITY_COLUMNS = [
+    "symbol",
+    "event_date",
+    "terminal_date",
+    "has_terminal_price",
+    "event_source",
+    "event_confidence",
+    "outcome_type",
+    "has_exit_value",
+    "price_rows_after_terminal_date",
+    "price_rows_after_event_date",
+    "universe_rows_after_terminal_date",
+    "universe_rows_after_event_date",
+    "backtest_rows_after_event_date",
+    "has_price_after_terminal_date",
+    "has_universe_after_terminal_date",
+    "has_universe_after_event_date",
+    "is_valid_liquidation_event",
+    "invalidation_reason",
+    "notes",
+]
+VALID_TERMINAL_EVENTS_COLUMNS = TERMINAL_EVENTS_COLUMNS + [
+    "outcome_type",
+    "has_exit_value",
+    "is_valid_liquidation_event",
+    "validity_notes",
+]
+SYMBOL_ALIAS_COLUMNS = [
+    "canonical_symbol",
+    "alias_symbol",
+    "start_date",
+    "end_date",
+    "action_type",
+    "source",
     "notes",
 ]
 BACKTEST_UNIVERSE_COLUMNS = ["date", "universe_name", "symbol", "reason"]

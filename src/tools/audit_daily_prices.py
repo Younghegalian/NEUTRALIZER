@@ -15,6 +15,10 @@ WITH duplicate_keys AS (
     GROUP BY date, symbol
     HAVING COUNT(*) > 1
 ),
+global_calendar AS (
+    SELECT date, LEAD(date) OVER (ORDER BY date) AS next_date
+    FROM (SELECT DISTINCT date FROM daily_prices ORDER BY date)
+),
 daily_checks AS (
     SELECT
         SUM(CASE WHEN date IS NULL THEN 1 ELSE 0 END) AS null_date,
@@ -48,6 +52,25 @@ integrity_checks AS (
             WHERE t.symbol IS NULL
         ) AS delisting_outcomes_without_terminal_event,
         (SELECT COUNT(*) FROM delisting_outcomes WHERE exit_date IS NULL) AS delisting_outcomes_missing_exit_date,
+        (
+            SELECT COUNT(*)
+            FROM terminal_event_validity v
+            LEFT JOIN terminal_events t USING(symbol, event_date)
+            WHERE t.symbol IS NULL
+        ) AS terminal_event_validity_without_terminal_event,
+        (
+            SELECT COUNT(*)
+            FROM valid_terminal_events
+            WHERE is_valid_liquidation_event = FALSE
+        ) AS invalid_rows_in_valid_terminal_events,
+        (
+            SELECT COUNT(*)
+            FROM universe_membership u
+            JOIN liquidity_metrics l USING(date, symbol)
+            JOIN global_calendar c ON c.date = u.date
+            LEFT JOIN daily_prices p ON p.symbol = u.symbol AND p.date = c.next_date AND p.open > 0
+            WHERE l.has_next_open AND c.next_date IS NOT NULL AND p.symbol IS NULL
+        ) AS universe_global_next_open_mismatch,
         (SELECT COUNT(*) FROM universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS universe_price_quality_suspect,
         (SELECT COUNT(*) FROM backtest_universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS backtest_universe_price_quality_suspect
 )
@@ -75,6 +98,9 @@ UNION ALL SELECT 'terminal_events_missing_symbol_master', terminal_events_missin
 UNION ALL SELECT 'delisting_outcomes_missing_symbol_master', delisting_outcomes_missing_symbol_master FROM integrity_checks
 UNION ALL SELECT 'delisting_outcomes_without_terminal_event', delisting_outcomes_without_terminal_event FROM integrity_checks
 UNION ALL SELECT 'delisting_outcomes_missing_exit_date', delisting_outcomes_missing_exit_date FROM integrity_checks
+UNION ALL SELECT 'terminal_event_validity_without_terminal_event', terminal_event_validity_without_terminal_event FROM integrity_checks
+UNION ALL SELECT 'invalid_rows_in_valid_terminal_events', invalid_rows_in_valid_terminal_events FROM integrity_checks
+UNION ALL SELECT 'universe_global_next_open_mismatch', universe_global_next_open_mismatch FROM integrity_checks
 UNION ALL SELECT 'universe_price_quality_suspect', universe_price_quality_suspect FROM integrity_checks
 UNION ALL SELECT 'backtest_universe_price_quality_suspect', backtest_universe_price_quality_suspect FROM integrity_checks
 ORDER BY check_name
@@ -132,6 +158,16 @@ FROM delisting_outcomes
 """
 
 
+TERMINAL_VALIDITY_SQL = """
+SELECT
+    COUNT(*) AS terminal_events_checked,
+    SUM(CASE WHEN is_valid_liquidation_event THEN 1 ELSE 0 END) AS valid_liquidation_events,
+    SUM(CASE WHEN has_universe_after_terminal_date THEN 1 ELSE 0 END) AS universe_after_terminal_events,
+    SUM(CASE WHEN has_price_after_terminal_date THEN 1 ELSE 0 END) AS price_after_terminal_events
+FROM terminal_event_validity
+"""
+
+
 def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
     if not db_path.exists():
         raise FileNotFoundError(f"Missing DuckDB database: {db_path}")
@@ -141,6 +177,7 @@ def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
         sources = con.execute(SOURCE_SQL).fetchdf()
         quality = con.execute(QUALITY_SQL).fetchdf()
         delisting_outcomes = con.execute(DELISTING_OUTCOME_SQL).fetchdf()
+        terminal_validity = con.execute(TERMINAL_VALIDITY_SQL).fetchdf()
         hard_checks = con.execute(HARD_CHECK_SQL).fetchdf()
 
     print("[audit] daily_prices profile")
@@ -154,6 +191,9 @@ def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
     print()
     print("[audit] delisting outcomes")
     print(delisting_outcomes.to_string(index=False))
+    print()
+    print("[audit] terminal event validity")
+    print(terminal_validity.to_string(index=False))
     print()
     print("[audit] hard checks")
     print(hard_checks.to_string(index=False))

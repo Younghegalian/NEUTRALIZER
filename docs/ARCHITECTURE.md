@@ -18,6 +18,8 @@ SEC delisting discovery
   -> security_events / terminal_events
   -> delisting_outcomes
   -> backtest_universe_membership
+  -> terminal_event_validity / valid_terminal_events
+  -> symbol_aliases
   -> universe_stats
   -> pit_market.duckdb
 ```
@@ -28,8 +30,10 @@ SEC delisting discovery
 | --- | --- | --- |
 | `sec_delisting_collector.py` | SEC staging parquet files | Form 25/25-NSE candidates plus Form 3/4/5 ticker map. |
 | `build_delisting_outcomes.py` | `data/staging/sec_delisting_outcome_documents.parquet`, `data/research/delisting_outcomes.parquet` | Selected SEC Form 25 document parsing for effective dates, exit classification, and cash consideration. |
+| `build_terminal_event_validity.py` | `data/research/terminal_event_validity.parquet`, `data/research/valid_terminal_events.parquet` | Splits raw terminal hints from liquidation-safe terminal events. |
+| `build_symbol_aliases.py` | `data/research/symbol_aliases.parquet` | Curated ticker-change windows for resolving known alias periods. |
 | `yahoo_delisted_probe` | `data/staging/yahoo_delisted_probe_daily_prices.parquet` | Recovered daily bars for SEC delisting candidates; accepts only USD `EQUITY` and `ETF` Yahoo metadata. |
-| `yahoo_fallback_downloader.py` | `data/staging/yahoo_fallback_daily_prices.parquet` | Active current-symbol daily bars. |
+| `yahoo_fallback_downloader.py` | `data/staging/yahoo_fallback_daily_prices.parquet` | Active current-symbol daily bars plus forced ETF label seeds. |
 | `kaggle_delisted_loader.py` | `data/staging/kaggle_delisted_daily_prices.parquet` | Arandkei archive loader. |
 | `fmp_delisted_metadata.py` | `data/staging/fmp_delisted_metadata.parquet` | Optional metadata enrichment. |
 | `fmp_profile_metadata.py` | `data/staging/fmp_profile_metadata.parquet` | Optional cached sector and industry enrichment. |
@@ -64,6 +68,8 @@ Price validation rejects rows with null OHLC, non-positive OHLC, negative volume
 - Zero-volume rows with close above 10,000.
 
 Flagged rows are written to `data/research/price_quality_flags.parquet`. `liquidity_metrics` keeps raw `dollar_volume` and `adv20`, and also computes quality-filtered `quality_dollar_volume`, `quality_adv20`, and `quality_traded_days_20`.
+
+`next_open` is computed against the global FONA trading calendar. A row is executable only when the same symbol has a positive open on the very next global trading date, and that next row is not price-quality-suspect.
 
 ## Security Master
 
@@ -120,6 +126,9 @@ Outputs:
 - `security_events`: listing and delisting lifecycle events.
 - `terminal_events`: final exit reference price for each selected delisting event.
 - `delisting_outcomes`: enriched exit/outcome record for each selected delisting event.
+- `terminal_event_validity`: safety audit for each raw terminal event.
+- `valid_terminal_events`: terminal-event subset safe for forced-liquidation use.
+- `symbol_aliases`: curated ticker-change aliases for known symbol-history mismatches.
 - `backtest_universe_membership`: base universe membership with dates after selected delisting events removed.
 
 Policy:
@@ -131,3 +140,6 @@ Policy:
 - Terminal price is the last available close on or before the selected event date.
 - `delisting_outcomes` parses the matched Form 25 document when available. It stores the extracted effective date, best-effort exit classification, observed exit price on or before the effective/event date, and SEC cash consideration per share when the text contains it.
 - SEC cash consideration becomes `exit_value` only when it appears to be full cash consideration, not a mixed cash/stock component, and it is on a comparable scale with observed prices when prices are available.
+- `terminal_events` remains a raw provenance table. Backtest engines that need hard liquidation events should use `valid_terminal_events`.
+- A terminal event is not liquidation-safe when the same symbol still has base-universe membership after the terminal/event date, when terminal price is missing, or when lifecycle-adjusted membership appears after the selected event.
+- The current curated alias map records the Fiserv `FI` ticker window against FONA's continuous `FISV` price history.

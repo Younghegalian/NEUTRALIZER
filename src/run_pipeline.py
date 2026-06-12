@@ -26,10 +26,12 @@ from src.collectors.yahoo_fallback_downloader import (
 )
 from src.db.build_duckdb import build_duckdb
 from src.normalize.build_security_master import build_security_master
+from src.normalize.build_symbol_aliases import build_symbol_aliases
 from src.normalize.normalize_prices import normalize_prices
 from src.tools.check_prereqs import check_prereqs
 from src.universe.build_backtest_universe import build_backtest_universe
 from src.universe.build_delisting_outcomes import build_delisting_outcomes
+from src.universe.build_terminal_event_validity import build_terminal_event_validity
 from src.universe.build_universe import build_universe
 from src.universe.compute_liquidity import compute_liquidity
 from src.universe.universe_stats import build_universe_stats
@@ -52,6 +54,8 @@ FULL_PIPELINE_STEPS = [
     "universe",
     "backtest_universe",
     "delisting_outcomes",
+    "terminal_event_validity",
+    "symbol_aliases",
     "duckdb",
 ]
 
@@ -149,6 +153,10 @@ def run_step(args: argparse.Namespace, step: str) -> None:
             fetch_sec_docs=not args.skip_delisting_outcome_doc_fetch,
             sec_doc_limit=args.delisting_outcome_doc_limit,
         )
+    elif step == "terminal_event_validity":
+        build_terminal_event_validity()
+    elif step == "symbol_aliases":
+        build_symbol_aliases()
     elif step == "duckdb":
         build_duckdb()
     elif step == "check":
@@ -178,6 +186,11 @@ def print_summary() -> None:
         config.DELISTING_OUTCOMES_PATH,
         config.DELISTING_OUTCOMES_COLUMNS,
     )
+    valid_terminal_events = read_parquet_if_exists(
+        config.VALID_TERMINAL_EVENTS_PATH,
+        config.VALID_TERMINAL_EVENTS_COLUMNS,
+    )
+    symbol_aliases = read_parquet_if_exists(config.SYMBOL_ALIASES_PATH, config.SYMBOL_ALIAS_COLUMNS)
     universe_stats = read_parquet_if_exists(config.UNIVERSE_STATS_PATH, config.UNIVERSE_STATS_COLUMNS)
 
     date_start, date_end = _safe_min_max(daily_prices["date"]) if "date" in daily_prices else ("n/a", "n/a")
@@ -215,6 +228,8 @@ def print_summary() -> None:
     print(f"Backtest universe name: {config.BACKTEST_UNIVERSE_NAME}")
     print(f"Backtest universe rows: {len(backtest_universe):,}")
     print(f"Delisting outcomes: {len(delisting_outcomes):,}")
+    print(f"Valid terminal events: {len(valid_terminal_events):,}")
+    print(f"Symbol aliases: {len(symbol_aliases):,}")
     print(f"DuckDB path: {config.DUCKDB_PATH}")
 
 
@@ -232,6 +247,8 @@ def build_parser() -> argparse.ArgumentParser:
             "collect_sec_form345",
             "build_sec_delisted_candidates",
             "delisting_outcomes",
+            "terminal_event_validity",
+            "symbol_aliases",
             "check",
         ],
         help="Run one pipeline step instead of the full pipeline.",

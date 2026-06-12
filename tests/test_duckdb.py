@@ -25,6 +25,9 @@ class DuckDBTest(unittest.TestCase):
             security_events_path = root / "security_events.parquet"
             terminal_events_path = root / "terminal_events.parquet"
             delisting_outcomes_path = root / "delisting_outcomes.parquet"
+            terminal_event_validity_path = root / "terminal_event_validity.parquet"
+            valid_terminal_events_path = root / "valid_terminal_events.parquet"
+            symbol_aliases_path = root / "symbol_aliases.parquet"
             backtest_membership_path = root / "backtest_universe_membership.parquet"
             price_quality_flags_path = root / "price_quality_flags.parquet"
             db_path = root / "pit_market.duckdb"
@@ -133,6 +136,18 @@ class DuckDBTest(unittest.TestCase):
                 delisting_outcomes_path,
                 index=False,
             )
+            pd.DataFrame(columns=config.TERMINAL_EVENT_VALIDITY_COLUMNS).to_parquet(
+                terminal_event_validity_path,
+                index=False,
+            )
+            pd.DataFrame(columns=config.VALID_TERMINAL_EVENTS_COLUMNS).to_parquet(
+                valid_terminal_events_path,
+                index=False,
+            )
+            pd.DataFrame(columns=config.SYMBOL_ALIAS_COLUMNS).to_parquet(
+                symbol_aliases_path,
+                index=False,
+            )
             pd.DataFrame(columns=config.BACKTEST_UNIVERSE_COLUMNS).to_parquet(
                 backtest_membership_path,
                 index=False,
@@ -153,6 +168,9 @@ class DuckDBTest(unittest.TestCase):
                 security_events_path=security_events_path,
                 terminal_events_path=terminal_events_path,
                 delisting_outcomes_path=delisting_outcomes_path,
+                terminal_event_validity_path=terminal_event_validity_path,
+                valid_terminal_events_path=valid_terminal_events_path,
+                symbol_aliases_path=symbol_aliases_path,
                 backtest_universe_membership_path=backtest_membership_path,
                 price_quality_flags_path=price_quality_flags_path,
             )
