@@ -33,6 +33,7 @@ This repository contains the pipeline, tests, documentation, and brand assets. G
 | Active and delisted coverage | Active Yahoo bars plus SEC-candidate Yahoo recovery and Kaggle delisted archive |
 | Security classification | `security_master` with stock/ETF/fund classification, exchange, name, sector, and industry fields |
 | Backtest universe | `universe_membership` rebuilt daily from price, volume, ADV20, and next-open eligibility |
+| Lifecycle-adjusted universe | `backtest_universe_membership` removes symbols after trusted delisting events |
 | Liquidity features | `liquidity_metrics` with dollar volume, ADV20, positive-volume traded days, and next open |
 | Quality gates | Unit tests, hard daily-bar audit, and annual listing/delisting flow audit |
 
@@ -51,6 +52,9 @@ Latest local build:
 | Trading dates | 4,249 |
 | Universe date range | 2010-01-25 to 2026-06-09 |
 | Universe memberships | 13,740,815 |
+| Lifecycle-adjusted memberships | 13,162,013 |
+| Security lifecycle events | 13,635 |
+| Terminal delisting events | 1,778 |
 | Median daily universe size | 3,053 |
 
 Security classification:
@@ -84,6 +88,9 @@ SEC-led delisting discovery:
 | `liquidity_metrics` | 23,965,894 | `date, symbol` | Dollar volume, ADV20, positive-volume traded days, next open |
 | `universe_membership` | 13,740,815 | `date, universe, symbol` | Tradable universe membership by date |
 | `universe_stats` | 4,231 | `date, universe` | Daily sanity metrics for universe size, median close, ADV, and volume |
+| `security_events` | 13,635 | `symbol, event` | Listing and delisting lifecycle events from price coverage, FMP, and SEC |
+| `terminal_events` | 1,778 | `symbol, event_date` | Last available terminal close on or before delisting event; no zero fill |
+| `backtest_universe_membership` | 13,162,013 | `date, universe, symbol` | Lifecycle-adjusted backtest universe excluding post-delisting dates |
 
 Price-bar source coverage:
 
@@ -121,6 +128,7 @@ Python helpers:
 
 ```python
 from src.db.query_examples import (
+    get_backtest_universe,
     get_price_panel,
     get_prices,
     get_security_master,
@@ -128,6 +136,7 @@ from src.db.query_examples import (
 )
 
 symbols = get_universe("2020-01-02")
+backtest_symbols = get_backtest_universe("2020-01-02")
 prices = get_prices("2020-01-02", symbols[:100])
 panel = get_price_panel("2020-01-02", "2020-03-31")
 metadata = get_security_master(symbols[:100])
@@ -153,6 +162,24 @@ WHERE u.date = DATE '2020-01-02'
 ORDER BY p.symbol;
 ```
 
+Lifecycle-adjusted backtest universe:
+
+```sql
+SELECT
+    u.date,
+    u.symbol,
+    p.close,
+    t.event_date AS delisting_event_date,
+    t.terminal_price,
+    t.terminal_policy
+FROM backtest_universe_membership u
+JOIN daily_prices p USING (date, symbol)
+LEFT JOIN terminal_events t USING (symbol)
+WHERE u.date = DATE '2020-01-02'
+  AND u.universe_name = 'US_DAILY_LIFECYCLE_ADJUSTED_V2'
+ORDER BY u.symbol;
+```
+
 ## Source Model
 
 FONA uses SEC as the primary delisting discovery spine. SEC identifies delisting events and issuer CIKs; price collectors then recover the available OHLCV history for mapped tickers.
@@ -168,6 +195,14 @@ FONA uses SEC as the primary delisting discovery spine. SEC identifies delisting
 | Supplemental OHLCV | Stooq bulk archive | Attempted when available; pipeline continues without it |
 
 Yahoo chart responses are accepted only when metadata identifies a USD `EQUITY` or `ETF`; non-equity, non-USD, and placeholder `YHD` matches are rejected before normalization.
+
+Lifecycle policy:
+
+- `daily_prices` stays raw and never receives artificial zero-price rows.
+- `security_events` records listing and delisting events. FMP `delistedDate` is preferred; SEC Form 25/25-NSE `date_filed` is used as a proxy when no FMP date exists.
+- Delisting events are applied only to symbols with delisted-source price coverage to reduce ticker-reuse false positives.
+- `terminal_events` stores the last available close on or before the delisting event date. Missing terminal prices remain missing; they are not set to zero.
+- `backtest_universe_membership` excludes dates after the selected delisting event.
 
 ## Quality Controls
 
@@ -200,7 +235,7 @@ Annual market-flow validation:
 python -m src.tools.audit_market_flows --fetch-benchmarks --output data\research\market_flow_audit.csv
 ```
 
-Latest `stock_major_universe` completed-year medians:
+Latest `backtest_stock_major_universe` completed-year medians:
 
 | Metric | Value |
 | --- | ---: |
@@ -208,6 +243,7 @@ Latest `stock_major_universe` completed-year medians:
 | Public benchmark delisting rate | 7.16% |
 | Local SEC price-recovered delisting rate | 5.16% |
 | Local delisted-event capture vs benchmark | 71.68% |
+| Lifecycle-adjusted universe exit rate | 1.21% |
 
 ## Quick Start
 

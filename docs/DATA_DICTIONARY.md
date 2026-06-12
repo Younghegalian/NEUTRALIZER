@@ -64,6 +64,45 @@
 | `symbol` | Included symbol. |
 | `reason` | Eligibility rule summary. |
 
+## `security_events`
+
+| Column | Description |
+| --- | --- |
+| `symbol` | Internal symbol. |
+| `event_type` | `listing` or `delisting`. |
+| `event_date` | Event date. For SEC delistings this is a Form 25/25-NSE filing-date proxy. |
+| `source` | Event source, such as `price_first_date`, `fmp_delisted_date`, or `sec_form25_date_filed`. |
+| `source_event_id` | Source-specific identifier or aggregation note. |
+| `source_symbol` | Raw or source-normalized symbol used to match the event. |
+| `confidence` | `high`, `medium`, `proxy`, or `coverage_start`. |
+| `notes` | Event caveat. |
+
+## `terminal_events`
+
+| Column | Description |
+| --- | --- |
+| `symbol` | Internal symbol. |
+| `event_date` | Selected delisting event date. |
+| `terminal_date` | Last available price date on or before `event_date`. |
+| `terminal_price` | Last available close on or before `event_date`; never zero-filled. |
+| `previous_close` | Previous available close before `terminal_date`. |
+| `terminal_return` | `terminal_price / previous_close - 1` when available. |
+| `has_terminal_price` | True when a terminal price was found. |
+| `price_source` | Source of the terminal price row. |
+| `event_source` | Source of the selected delisting event. |
+| `event_confidence` | Confidence of the selected delisting event. |
+| `terminal_policy` | Exit-price policy used to build the row. |
+| `notes` | Terminal-price caveat. |
+
+## `backtest_universe_membership`
+
+| Column | Description |
+| --- | --- |
+| `date` | Universe date. |
+| `universe_name` | `US_DAILY_LIFECYCLE_ADJUSTED_V2`. |
+| `symbol` | Included symbol. |
+| `reason` | Base eligibility rule plus lifecycle adjustment when applicable. |
+
 ## `universe_stats`
 
 Daily sanity table with symbol counts, median close, median ADV20, total dollar volume, and delisted-source count.

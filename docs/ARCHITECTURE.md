@@ -14,6 +14,8 @@ SEC delisting discovery
   -> security_master
   -> liquidity_metrics
   -> universe_membership
+  -> security_events / terminal_events
+  -> backtest_universe_membership
   -> universe_stats
   -> pit_market.duckdb
 ```
@@ -68,7 +70,7 @@ Stock/ETF classification comes from Yahoo metadata and Nasdaq Trader listing met
 
 ## Universe
 
-The universe is a daily table, not a fixed symbol list.
+The base universe is a daily table, not a fixed symbol list.
 
 Eligibility:
 
@@ -86,3 +88,25 @@ Universe name:
 ```text
 US_DAILY_SURVIVORSHIP_REDUCED_V1
 ```
+
+## Lifecycle-Adjusted Backtest Universe
+
+`src/universe/build_backtest_universe.py` builds a second universe for strategy simulation:
+
+```text
+US_DAILY_LIFECYCLE_ADJUSTED_V2
+```
+
+Outputs:
+
+- `security_events`: listing and delisting lifecycle events.
+- `terminal_events`: final exit reference price for each selected delisting event.
+- `backtest_universe_membership`: base universe membership with dates after selected delisting events removed.
+
+Policy:
+
+- `daily_prices` is never zero-filled for delistings.
+- FMP `delistedDate` is treated as the highest-confidence delisting event.
+- SEC Form 25/25-NSE `date_filed` is used as a proxy only when a higher-confidence event is unavailable.
+- Delisting events are applied only to symbols with delisted-source price coverage to reduce ticker-reuse false positives.
+- Terminal price is the last available close on or before the selected event date.

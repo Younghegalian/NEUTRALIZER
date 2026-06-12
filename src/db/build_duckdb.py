@@ -25,6 +25,9 @@ def build_duckdb(
     liquidity_metrics_path: Path = config.LIQUIDITY_METRICS_PATH,
     universe_membership_path: Path = config.UNIVERSE_MEMBERSHIP_PATH,
     universe_stats_path: Path = config.UNIVERSE_STATS_PATH,
+    security_events_path: Path = config.SECURITY_EVENTS_PATH,
+    terminal_events_path: Path = config.TERMINAL_EVENTS_PATH,
+    backtest_universe_membership_path: Path = config.BACKTEST_UNIVERSE_MEMBERSHIP_PATH,
 ) -> Path:
     import duckdb
 
@@ -38,6 +41,9 @@ def build_duckdb(
             "liquidity_metrics",
             "universe_membership",
             "universe_stats",
+            "security_events",
+            "terminal_events",
+            "backtest_universe_membership",
         ]:
             con.execute(f"DROP TABLE IF EXISTS {table}")
 
@@ -124,6 +130,48 @@ def build_duckdb(
                 median_adv20 DOUBLE,
                 total_dollar_volume DOUBLE,
                 delisted_source_count BIGINT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE security_events (
+                symbol TEXT,
+                event_type TEXT,
+                event_date DATE,
+                source TEXT,
+                source_event_id TEXT,
+                source_symbol TEXT,
+                confidence TEXT,
+                notes TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE terminal_events (
+                symbol TEXT,
+                event_date DATE,
+                terminal_date DATE,
+                terminal_price DOUBLE,
+                previous_close DOUBLE,
+                terminal_return DOUBLE,
+                has_terminal_price BOOLEAN,
+                price_source TEXT,
+                event_source TEXT,
+                event_confidence TEXT,
+                terminal_policy TEXT,
+                notes TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE backtest_universe_membership (
+                date DATE,
+                universe_name TEXT,
+                symbol TEXT,
+                reason TEXT
             )
             """
         )
@@ -232,6 +280,57 @@ def build_duckdb(
             FROM read_parquet('{path}')
             """,
         )
+        _insert_from_parquet(
+            con,
+            "security_events",
+            security_events_path,
+            """
+            SELECT
+                CAST(symbol AS TEXT),
+                CAST(event_type AS TEXT),
+                CAST(event_date AS DATE),
+                CAST(source AS TEXT),
+                CAST(source_event_id AS TEXT),
+                CAST(source_symbol AS TEXT),
+                CAST(confidence AS TEXT),
+                CAST(notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
+            "terminal_events",
+            terminal_events_path,
+            """
+            SELECT
+                CAST(symbol AS TEXT),
+                CAST(event_date AS DATE),
+                CAST(terminal_date AS DATE),
+                CAST(terminal_price AS DOUBLE),
+                CAST(previous_close AS DOUBLE),
+                CAST(terminal_return AS DOUBLE),
+                CAST(has_terminal_price AS BOOLEAN),
+                CAST(price_source AS TEXT),
+                CAST(event_source AS TEXT),
+                CAST(event_confidence AS TEXT),
+                CAST(terminal_policy AS TEXT),
+                CAST(notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
+            "backtest_universe_membership",
+            backtest_universe_membership_path,
+            """
+            SELECT
+                CAST(date AS DATE),
+                CAST(universe_name AS TEXT),
+                CAST(symbol AS TEXT),
+                CAST(reason AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
 
         con.execute("CREATE INDEX IF NOT EXISTS idx_prices_date_symbol ON daily_prices(date, symbol)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_security_symbol ON security_master(symbol)")
@@ -239,6 +338,12 @@ def build_duckdb(
             "CREATE INDEX IF NOT EXISTS idx_universe_date_name ON universe_membership(date, universe_name)"
         )
         con.execute("CREATE INDEX IF NOT EXISTS idx_liquidity_date_symbol ON liquidity_metrics(date, symbol)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_security_events_symbol ON security_events(symbol, event_type)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_terminal_events_symbol ON terminal_events(symbol, event_date)")
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_backtest_universe_date_name "
+            "ON backtest_universe_membership(date, universe_name)"
+        )
     finally:
         con.close()
 

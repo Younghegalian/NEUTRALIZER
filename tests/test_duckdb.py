@@ -22,6 +22,9 @@ class DuckDBTest(unittest.TestCase):
             liquidity_path = root / "liquidity_metrics.parquet"
             membership_path = root / "universe_membership.parquet"
             stats_path = root / "universe_stats.parquet"
+            security_events_path = root / "security_events.parquet"
+            terminal_events_path = root / "terminal_events.parquet"
+            backtest_membership_path = root / "backtest_universe_membership.parquet"
             db_path = root / "pit_market.duckdb"
 
             pd.DataFrame(
@@ -116,6 +119,18 @@ class DuckDBTest(unittest.TestCase):
                 ],
                 columns=config.UNIVERSE_STATS_COLUMNS,
             ).to_parquet(stats_path, index=False)
+            pd.DataFrame(columns=config.SECURITY_EVENTS_COLUMNS).to_parquet(
+                security_events_path,
+                index=False,
+            )
+            pd.DataFrame(columns=config.TERMINAL_EVENTS_COLUMNS).to_parquet(
+                terminal_events_path,
+                index=False,
+            )
+            pd.DataFrame(columns=config.BACKTEST_UNIVERSE_COLUMNS).to_parquet(
+                backtest_membership_path,
+                index=False,
+            )
 
             build_duckdb(
                 db_path=db_path,
@@ -125,6 +140,9 @@ class DuckDBTest(unittest.TestCase):
                 liquidity_metrics_path=liquidity_path,
                 universe_membership_path=membership_path,
                 universe_stats_path=stats_path,
+                security_events_path=security_events_path,
+                terminal_events_path=terminal_events_path,
+                backtest_universe_membership_path=backtest_membership_path,
             )
 
             self.assertEqual(get_universe("2020-01-02", db_path=db_path), ["GOOD"])

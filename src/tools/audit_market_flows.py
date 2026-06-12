@@ -83,14 +83,31 @@ STOCKANALYSIS_DELISTED_FALLBACK = {
 @dataclass(frozen=True)
 class Scope:
     name: str
+    membership_table: str
+    universe_name: str
     where_sql: str
 
 
 SCOPES = [
-    Scope("all_universe", "TRUE"),
-    Scope("stock_universe", "sec.asset_type = 'stock'"),
+    Scope("all_universe", "universe_membership", config.UNIVERSE_NAME, "TRUE"),
+    Scope("stock_universe", "universe_membership", config.UNIVERSE_NAME, "sec.asset_type = 'stock'"),
     Scope(
         "stock_major_universe",
+        "universe_membership",
+        config.UNIVERSE_NAME,
+        "sec.asset_type = 'stock' AND COALESCE(sec.exchange, '') NOT ILIKE '%OTC%'",
+    ),
+    Scope("backtest_all_universe", "backtest_universe_membership", config.BACKTEST_UNIVERSE_NAME, "TRUE"),
+    Scope(
+        "backtest_stock_universe",
+        "backtest_universe_membership",
+        config.BACKTEST_UNIVERSE_NAME,
+        "sec.asset_type = 'stock'",
+    ),
+    Scope(
+        "backtest_stock_major_universe",
+        "backtest_universe_membership",
+        config.BACKTEST_UNIVERSE_NAME,
         "sec.asset_type = 'stock' AND COALESCE(sec.exchange, '') NOT ILIKE '%OTC%'",
     ),
 ]
@@ -190,10 +207,10 @@ def _scope_sql(scope: Scope) -> str:
             sec.asset_type,
             sec.exchange,
             sm.has_delisted_source
-        FROM universe_membership um
+        FROM {scope.membership_table} um
         JOIN symbol_master sm USING(symbol)
         LEFT JOIN security_master sec USING(symbol)
-        WHERE um.universe_name = '{config.UNIVERSE_NAME}'
+        WHERE um.universe_name = '{scope.universe_name}'
           AND {scope.where_sql}
     ),
     daily_counts AS (
@@ -440,7 +457,7 @@ def audit_market_flows(
     fetch_benchmarks: bool = False,
     output: Path | None = None,
     json_output: Path | None = None,
-    print_scope: str = "stock_major_universe",
+    print_scope: str = "backtest_stock_major_universe",
 ) -> int:
     frame = build_market_flow_audit(db_path=db_path, fetch_benchmarks=fetch_benchmarks)
     write_outputs(frame, output, json_output)
@@ -453,7 +470,7 @@ def audit_market_flows(
     print(printable.to_string(index=False))
 
     completed = frame[frame["year"] < frame["year"].max()]
-    major_completed = completed[completed["scope"] == "stock_major_universe"]
+    major_completed = completed[completed["scope"] == "backtest_stock_major_universe"]
     if major_completed.empty:
         return 0
 
@@ -461,7 +478,7 @@ def audit_market_flows(
     median_delisted_exit_rate = major_completed["db_delisted_source_exit_rate_pct"].median()
     print()
     print(
-        "[audit] stock_major_universe completed-year medians: "
+        "[audit] backtest_stock_major_universe completed-year medians: "
         f"exit_rate={median_exit_rate:.2f}%, "
         f"delisted_source_exit_rate={median_delisted_exit_rate:.2f}%"
     )
@@ -494,7 +511,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--json-output", type=Path, default=None, help="Optional JSON output path.")
     parser.add_argument(
         "--print-scope",
-        default="stock_major_universe",
+        default="backtest_stock_major_universe",
         choices=[scope.name for scope in SCOPES] + ["all"],
         help="Scope to print in the console. Use 'all' to print every scope.",
     )

@@ -38,9 +38,13 @@ BAD_ROWS_REPORT_PATH = NORMALIZED_DIR / "bad_rows_report.parquet"
 LIQUIDITY_METRICS_PATH = RESEARCH_DIR / "liquidity_metrics.parquet"
 UNIVERSE_MEMBERSHIP_PATH = RESEARCH_DIR / "universe_membership.parquet"
 UNIVERSE_STATS_PATH = RESEARCH_DIR / "universe_stats.parquet"
+SECURITY_EVENTS_PATH = RESEARCH_DIR / "security_events.parquet"
+TERMINAL_EVENTS_PATH = RESEARCH_DIR / "terminal_events.parquet"
+BACKTEST_UNIVERSE_MEMBERSHIP_PATH = RESEARCH_DIR / "backtest_universe_membership.parquet"
 
 DUCKDB_PATH = DATA_DIR / "pit_market.duckdb"
 UNIVERSE_NAME = "US_DAILY_SURVIVORSHIP_REDUCED_V1"
+BACKTEST_UNIVERSE_NAME = "US_DAILY_LIFECYCLE_ADJUSTED_V2"
 
 CANONICAL_PRICE_COLUMNS = [
     "date",
@@ -94,6 +98,31 @@ LIQUIDITY_COLUMNS = [
 ]
 
 UNIVERSE_COLUMNS = ["date", "universe_name", "symbol", "reason"]
+SECURITY_EVENTS_COLUMNS = [
+    "symbol",
+    "event_type",
+    "event_date",
+    "source",
+    "source_event_id",
+    "source_symbol",
+    "confidence",
+    "notes",
+]
+TERMINAL_EVENTS_COLUMNS = [
+    "symbol",
+    "event_date",
+    "terminal_date",
+    "terminal_price",
+    "previous_close",
+    "terminal_return",
+    "has_terminal_price",
+    "price_source",
+    "event_source",
+    "event_confidence",
+    "terminal_policy",
+    "notes",
+]
+BACKTEST_UNIVERSE_COLUMNS = ["date", "universe_name", "symbol", "reason"]
 UNIVERSE_STATS_COLUMNS = [
     "date",
     "universe_name",

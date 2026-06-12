@@ -37,7 +37,9 @@ integrity_checks AS (
         (SELECT COUNT(*) FROM daily_prices p LEFT JOIN symbol_master s USING(symbol) WHERE s.symbol IS NULL) AS prices_missing_symbol_master,
         (SELECT COUNT(*) FROM symbol_master s LEFT JOIN security_master sm USING(symbol) WHERE sm.symbol IS NULL) AS symbol_master_missing_security_master,
         (SELECT COUNT(*) FROM liquidity_metrics l LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS liquidity_without_price,
-        (SELECT COUNT(*) FROM universe_membership u LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS universe_without_price
+        (SELECT COUNT(*) FROM universe_membership u LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS universe_without_price,
+        (SELECT COUNT(*) FROM backtest_universe_membership u LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS backtest_universe_without_price,
+        (SELECT COUNT(*) FROM terminal_events t LEFT JOIN symbol_master s USING(symbol) WHERE s.symbol IS NULL) AS terminal_events_missing_symbol_master
 )
 SELECT 'duplicate_keys' AS check_name, COUNT(*)::DOUBLE AS value FROM duplicate_keys
 UNION ALL SELECT 'duplicate_affected_rows', COALESCE(SUM(row_count), 0)::DOUBLE FROM duplicate_keys
@@ -58,6 +60,8 @@ UNION ALL SELECT 'prices_missing_symbol_master', prices_missing_symbol_master FR
 UNION ALL SELECT 'symbol_master_missing_security_master', symbol_master_missing_security_master FROM integrity_checks
 UNION ALL SELECT 'liquidity_without_price', liquidity_without_price FROM integrity_checks
 UNION ALL SELECT 'universe_without_price', universe_without_price FROM integrity_checks
+UNION ALL SELECT 'backtest_universe_without_price', backtest_universe_without_price FROM integrity_checks
+UNION ALL SELECT 'terminal_events_missing_symbol_master', terminal_events_missing_symbol_master FROM integrity_checks
 ORDER BY check_name
 """
 

@@ -35,6 +35,27 @@ def get_universe(
     return [row[0] for row in rows]
 
 
+def get_backtest_universe(
+    date: str,
+    db_path: Path = config.DUCKDB_PATH,
+) -> list[str]:
+    con = _connect(db_path)
+    try:
+        rows = con.execute(
+            """
+            SELECT symbol
+            FROM backtest_universe_membership
+            WHERE date = CAST(? AS DATE)
+              AND universe_name = ?
+            ORDER BY symbol
+            """,
+            [date, config.BACKTEST_UNIVERSE_NAME],
+        ).fetchall()
+    finally:
+        con.close()
+    return [row[0] for row in rows]
+
+
 def get_prices(
     date: str,
     symbols: list[str],

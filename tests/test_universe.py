@@ -5,6 +5,12 @@ import unittest
 import pandas as pd
 
 from src import config
+from src.universe.build_backtest_universe import (
+    build_backtest_universe_df,
+    build_security_events_df,
+    build_terminal_events_df,
+    select_delisting_events,
+)
 from src.universe.build_universe import build_universe_df
 from src.universe.compute_liquidity import compute_liquidity_metrics_df
 
@@ -140,6 +146,147 @@ class UniverseTest(unittest.TestCase):
 
         universe = build_universe_df(liquidity, universe_name=config.UNIVERSE_NAME)
         self.assertEqual(set(universe["symbol"]), {"GOOD"})
+
+    def test_backtest_universe_removes_dates_after_delisting_event(self) -> None:
+        symbol_master = pd.DataFrame(
+            [
+                {
+                    "symbol": "DEAD",
+                    "vendor_symbol": "DEAD",
+                    "first_date": "2020-01-01",
+                    "last_date": "2020-01-04",
+                    "source_list": "yahoo_delisted_probe",
+                    "has_active_source": False,
+                    "has_delisted_source": True,
+                    "observation_count": 4,
+                },
+                {
+                    "symbol": "LIVE",
+                    "vendor_symbol": "LIVE",
+                    "first_date": "2020-01-01",
+                    "last_date": "2020-01-04",
+                    "source_list": "yahoo_fallback",
+                    "has_active_source": True,
+                    "has_delisted_source": False,
+                    "observation_count": 4,
+                },
+            ],
+            columns=config.SYMBOL_MASTER_COLUMNS,
+        )
+        fmp = pd.DataFrame(
+            [
+                {
+                    "symbol": "DEAD",
+                    "companyName": "Dead Co.",
+                    "exchange": "NASDAQ",
+                    "ipoDate": "2019-01-01",
+                    "delistedDate": "2020-01-02",
+                    "source": "fmp",
+                },
+                {
+                    "symbol": "LIVE",
+                    "companyName": "Live Co.",
+                    "exchange": "NYSE",
+                    "ipoDate": "2019-01-01",
+                    "delistedDate": "2020-01-02",
+                    "source": "fmp",
+                },
+            ]
+        )
+        events = build_security_events_df(
+            symbol_master=symbol_master,
+            fmp_delisted_metadata=fmp,
+            sec_delisted_candidates=pd.DataFrame(),
+        )
+        delistings = select_delisting_events(events)
+        self.assertEqual(set(delistings["symbol"]), {"DEAD"})
+
+        membership = pd.DataFrame(
+            [
+                {"date": "2020-01-01", "universe_name": config.UNIVERSE_NAME, "symbol": "DEAD", "reason": "base"},
+                {"date": "2020-01-02", "universe_name": config.UNIVERSE_NAME, "symbol": "DEAD", "reason": "base"},
+                {"date": "2020-01-03", "universe_name": config.UNIVERSE_NAME, "symbol": "DEAD", "reason": "base"},
+                {"date": "2020-01-03", "universe_name": config.UNIVERSE_NAME, "symbol": "LIVE", "reason": "base"},
+            ],
+            columns=config.UNIVERSE_COLUMNS,
+        )
+        adjusted = build_backtest_universe_df(membership, delistings)
+
+        dead_dates = adjusted[adjusted["symbol"] == "DEAD"]["date"].dt.strftime("%Y-%m-%d").tolist()
+        self.assertEqual(dead_dates, ["2020-01-01", "2020-01-02"])
+        self.assertIn("LIVE", set(adjusted["symbol"]))
+        self.assertEqual(set(adjusted["universe_name"]), {config.BACKTEST_UNIVERSE_NAME})
+
+    def test_terminal_events_use_last_close_without_zero_fill(self) -> None:
+        delistings = pd.DataFrame(
+            [
+                {
+                    "symbol": "DEAD",
+                    "event_type": "delisting",
+                    "event_date": "2020-01-03",
+                    "source": "sec_form25_date_filed",
+                    "source_event_id": "test",
+                    "source_symbol": "DEAD",
+                    "confidence": "proxy",
+                    "notes": "test",
+                }
+            ],
+            columns=config.SECURITY_EVENTS_COLUMNS,
+        )
+        daily_prices = pd.DataFrame(
+            [
+                {
+                    "date": "2020-01-01",
+                    "symbol": "DEAD",
+                    "vendor_symbol": "DEAD",
+                    "open": 10,
+                    "high": 10,
+                    "low": 10,
+                    "close": 10,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "yahoo_delisted_probe",
+                    "is_delisted_source": True,
+                },
+                {
+                    "date": "2020-01-02",
+                    "symbol": "DEAD",
+                    "vendor_symbol": "DEAD",
+                    "open": 5,
+                    "high": 5,
+                    "low": 5,
+                    "close": 5,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "yahoo_delisted_probe",
+                    "is_delisted_source": True,
+                },
+                {
+                    "date": "2020-01-04",
+                    "symbol": "DEAD",
+                    "vendor_symbol": "DEAD",
+                    "open": 1,
+                    "high": 1,
+                    "low": 1,
+                    "close": 1,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "yahoo_delisted_probe",
+                    "is_delisted_source": True,
+                },
+            ],
+            columns=config.CANONICAL_PRICE_COLUMNS,
+        )
+
+        terminal = build_terminal_events_df(daily_prices, delistings)
+        row = terminal.iloc[0]
+
+        self.assertEqual(row["terminal_date"].strftime("%Y-%m-%d"), "2020-01-02")
+        self.assertEqual(row["terminal_price"], 5)
+        self.assertEqual(row["previous_close"], 10)
+        self.assertAlmostEqual(row["terminal_return"], -0.5)
+        self.assertTrue(row["has_terminal_price"])
+        self.assertNotEqual(row["terminal_price"], 0)
 
 
 if __name__ == "__main__":

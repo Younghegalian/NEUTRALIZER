@@ -27,6 +27,7 @@ from src.db.build_duckdb import build_duckdb
 from src.normalize.build_security_master import build_security_master
 from src.normalize.normalize_prices import normalize_prices
 from src.tools.check_prereqs import check_prereqs
+from src.universe.build_backtest_universe import build_backtest_universe
 from src.universe.build_universe import build_universe
 from src.universe.compute_liquidity import compute_liquidity
 from src.universe.universe_stats import build_universe_stats
@@ -46,6 +47,7 @@ FULL_PIPELINE_STEPS = [
     "security_master",
     "liquidity",
     "universe",
+    "backtest_universe",
     "duckdb",
 ]
 
@@ -130,6 +132,8 @@ def run_step(args: argparse.Namespace, step: str) -> None:
     elif step == "universe":
         build_universe()
         build_universe_stats()
+    elif step == "backtest_universe":
+        build_backtest_universe()
     elif step == "duckdb":
         build_duckdb()
     elif step == "check":
@@ -151,6 +155,10 @@ def print_summary() -> None:
     daily_prices = read_parquet_if_exists(config.DAILY_PRICES_PATH, config.CANONICAL_PRICE_COLUMNS)
     symbol_master = read_parquet_if_exists(config.SYMBOL_MASTER_PATH, config.SYMBOL_MASTER_COLUMNS)
     universe_membership = read_parquet_if_exists(config.UNIVERSE_MEMBERSHIP_PATH, config.UNIVERSE_COLUMNS)
+    backtest_universe = read_parquet_if_exists(
+        config.BACKTEST_UNIVERSE_MEMBERSHIP_PATH,
+        config.BACKTEST_UNIVERSE_COLUMNS,
+    )
     universe_stats = read_parquet_if_exists(config.UNIVERSE_STATS_PATH, config.UNIVERSE_STATS_COLUMNS)
 
     date_start, date_end = _safe_min_max(daily_prices["date"]) if "date" in daily_prices else ("n/a", "n/a")
@@ -185,6 +193,8 @@ def print_summary() -> None:
     print(f"Universe start: {universe_start}")
     print(f"Universe end: {universe_end}")
     print(f"Median universe count: {median_universe_count_text}")
+    print(f"Backtest universe name: {config.BACKTEST_UNIVERSE_NAME}")
+    print(f"Backtest universe rows: {len(backtest_universe):,}")
     print(f"DuckDB path: {config.DUCKDB_PATH}")
 
 

@@ -47,10 +47,11 @@ The script:
 8. Refreshes cached FMP profile metadata up to `FONA_FMP_PROFILE_LIMIT`.
 9. Rebuilds `security_master`.
 10. Recomputes liquidity metrics and universe tables.
-11. Rebuilds `data/pit_market.duckdb`.
-12. Audits daily-bar grain, nulls, OHLC validity, date validity, and table integrity.
-13. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
-14. Runs unit tests.
+11. Rebuilds lifecycle events, terminal events, and the lifecycle-adjusted backtest universe.
+12. Rebuilds `data/pit_market.duckdb`.
+13. Audits daily-bar grain, nulls, OHLC validity, date validity, and table integrity.
+14. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
+15. Runs unit tests.
 
 ## Faster Manual Runs
 
@@ -80,6 +81,7 @@ python -m src.run_pipeline --step fmp_profiles --fmp-profile-limit 0
 python -m src.run_pipeline --step security_master
 python -m src.run_pipeline --step liquidity
 python -m src.run_pipeline --step universe
+python -m src.run_pipeline --step backtest_universe
 python -m src.run_pipeline --step duckdb
 ```
 
@@ -95,7 +97,7 @@ Audit annual listing and delisting flow rates:
 python -m src.tools.audit_market_flows --fetch-benchmarks --output data\research\market_flow_audit.csv
 ```
 
-The flow audit reports three scopes: all universe members, stock-only members, and stock-only major-exchange members excluding OTC exchanges. Use `stock_major_universe` as the closest public-market comparison scope. The audit separates price/universe behavior from event coverage:
+The flow audit reports base and lifecycle-adjusted scopes. Use `backtest_stock_major_universe` as the closest backtest-ready public-market comparison scope. The audit separates price/universe behavior from event coverage:
 
 - `new_to_universe` and `db_listing_rate_pct` measure symbols newly entering the local tradable universe.
 - `left_universe_completed` measures symbols that disappear from the local universe in completed years.
