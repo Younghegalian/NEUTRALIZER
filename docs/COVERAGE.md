@@ -20,7 +20,7 @@ Coverage is split into two different questions:
 | Final delisted-source symbols | 1,782 |
 | Final priced symbols | 11,813 |
 | Forced ETF label-seed symbols recovered | 10 |
-| Delisted-source universe memberships | 948,521 |
+| Delisted-source universe memberships | 948,511 |
 
 ## Backtest Lifecycle Coverage
 
@@ -50,8 +50,8 @@ Latest lifecycle build:
 | Raw terminal events with later universe membership | 403 |
 | Raw terminal events with later price rows | 957 |
 | Zero terminal prices | 0 |
-| Lifecycle-adjusted universe memberships | 12,865,749 |
-| Base universe rows removed by lifecycle policy | 566,295 |
+| Lifecycle-adjusted universe memberships | 12,865,698 |
+| Base universe rows removed by lifecycle policy | 566,291 |
 | Membership rows after selected delisting event | 0 |
 
 Delisting events are applied only to symbols with delisted-source price coverage. This reduces ticker-reuse false positives, but it also means unpriced delisting candidates remain coverage gaps rather than simulated zero-price rows.
@@ -99,8 +99,14 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 | --- | ---: |
 | Price quality flagged rows | 192,862 |
 | Price quality flagged symbols | 242 |
+| Return quality flagged rows | 1,661 |
+| Return quality flagged symbols | 336 |
+| Return quality exclusion candidates | 1,479 |
+| Corporate-action evidence rows | 16 |
 | Price-quality-suspect rows in base universe | 0 |
 | Price-quality-suspect rows in backtest universe | 0 |
+| Return-quality exclusion rows in base universe | 0 |
+| Return-quality exclusion rows in backtest universe | 0 |
 | Global-calendar next-open mismatches in base universe | 0 |
 | Invalid rows inside `valid_terminal_events` | 0 |
 | Duplicate `(date, symbol)` keys | 0 |

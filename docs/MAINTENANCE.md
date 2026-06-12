@@ -59,15 +59,16 @@ The script:
 8. Refreshes cached FMP profile metadata up to `FONA_FMP_PROFILE_LIMIT`.
 9. Refreshes cached SEC CIK/SIC metadata up to `FONA_SEC_COMPANY_LIMIT`.
 10. Rebuilds `security_master`.
-11. Recomputes price-quality flags, liquidity metrics, and universe tables.
-12. Rebuilds lifecycle events, terminal events, and the lifecycle-adjusted backtest universe.
-13. Rebuilds delisting outcome enrichment from selected SEC Form 25 documents.
-14. Rebuilds terminal-event validity and the liquidation-safe terminal subset.
-15. Rebuilds curated symbol aliases.
-16. Rebuilds `data/pit_market.duckdb`.
-17. Audits daily-bar grain, nulls, OHLC validity, date validity, global next-open execution, price-quality exclusions, delisting outcome joins, terminal-event validity, and table integrity.
-18. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
-19. Runs unit tests.
+11. Rebuilds curated corporate-action evidence sources.
+12. Recomputes price-quality flags, return-quality flags, liquidity metrics, and universe tables.
+13. Rebuilds lifecycle events, terminal events, and the lifecycle-adjusted backtest universe.
+14. Rebuilds delisting outcome enrichment from selected SEC Form 25 documents.
+15. Rebuilds terminal-event validity and the liquidation-safe terminal subset.
+16. Rebuilds curated symbol aliases.
+17. Rebuilds `data/pit_market.duckdb`.
+18. Audits daily-bar grain, nulls, OHLC validity, date validity, global next-open execution, price/return-quality exclusions, delisting outcome joins, terminal-event validity, and table integrity.
+19. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
+20. Runs unit tests.
 
 ## Faster Manual Runs
 
@@ -96,6 +97,7 @@ python -m src.run_pipeline --step normalize --start-date 2010-01-01 --end-date t
 python -m src.run_pipeline --step fmp_profiles --fmp-profile-limit 0
 python -m src.run_pipeline --step sec_company_metadata --sec-company-limit 0
 python -m src.run_pipeline --step security_master
+python -m src.run_pipeline --step corporate_action_evidence
 python -m src.run_pipeline --step liquidity
 python -m src.run_pipeline --step universe
 python -m src.run_pipeline --step backtest_universe

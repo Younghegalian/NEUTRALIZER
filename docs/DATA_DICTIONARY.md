@@ -73,6 +73,50 @@
 | `open`, `high`, `low`, `close`, `volume`, `adjusted_close` | Flagged raw price row values. |
 | `close_adjusted_ratio` | `close / adjusted_close` when adjusted close is positive. |
 
+## `corporate_action_evidence`
+
+Curated, human-checkable source layer for high-impact price events that can otherwise look like strategy returns.
+
+| Column | Description |
+| --- | --- |
+| `symbol` | Internal symbol. |
+| `event_date` | Source event date or reference date. |
+| `event_type` | `reverse_split`, `price_reference`, `news_spike`, or `trading_suspension`. |
+| `action_ratio` | Reverse split ratio when applicable, e.g. `25` for a 1-for-25 reverse split. |
+| `reference_price` | Reference price guardrail when applicable, such as a preferred security liquidation amount. |
+| `source_name` | Short source label. |
+| `source_url` | Click-through URL to SEC, Nasdaq Trader, issuer IR, or other evidence. |
+| `source_authority` | Source family, such as `sec`, `nasdaq_trader`, or `issuer_ir`. |
+| `confidence` | Evidence confidence. |
+| `notes` | Human-readable caveat. |
+
+## `return_quality_flags`
+
+Extreme close-to-close returns with split/news/scale-error classification. Raw `daily_prices` rows are preserved; this table provides the clean-return guardrail.
+
+| Column | Description |
+| --- | --- |
+| `date` | Flagged return date. |
+| `symbol` | Internal symbol. |
+| `source` | Price source for the flagged row. |
+| `prev_date` | Previous available price date for the same symbol. |
+| `prev_close` | Previous available close. |
+| `close` | Current close. |
+| `raw_return` | `close / prev_close - 1`. |
+| `prev_adjusted_close` | Previous adjusted close when available. |
+| `adjusted_close` | Current adjusted close when available. |
+| `adjusted_return` | `adjusted_close / prev_adjusted_close - 1` when available. |
+| `prev_volume` | Previous available volume. |
+| `volume` | Current volume. |
+| `flag_reason` | Semicolon-separated reasons, such as `matched_reverse_split_evidence`, `split_like_return_ratio`, or `matched_news_event_evidence`. |
+| `severity` | `exclude_candidate`, `event_risk`, or `review`. |
+| `event_type` | Matched evidence event type when available. |
+| `evidence_event_date` | Matched source event date when available. |
+| `evidence_source_name` | Matched evidence label. |
+| `evidence_url` | Matched click-through evidence URL. |
+| `exclude_from_backtest_return` | True when the row should be removed from clean return simulation because it likely reflects a split/scale artifact rather than an economic return. |
+| `notes` | Caveat, such as a price jump date not matching the sourced split effective date. |
+
 ## `universe_membership`
 
 | Column | Description |

@@ -13,7 +13,8 @@ SEC delisting discovery
   -> symbol_master
   -> SEC CIK/SIC metadata
   -> security_master
-  -> price_quality_flags / liquidity_metrics
+  -> corporate_action_evidence
+  -> price_quality_flags / return_quality_flags / liquidity_metrics
   -> universe_membership
   -> security_events / terminal_events
   -> delisting_outcomes
@@ -32,6 +33,8 @@ SEC delisting discovery
 | `build_delisting_outcomes.py` | `data/staging/sec_delisting_outcome_documents.parquet`, `data/research/delisting_outcomes.parquet` | Selected SEC Form 25 document parsing for effective dates, exit classification, and cash consideration. |
 | `build_terminal_event_validity.py` | `data/research/terminal_event_validity.parquet`, `data/research/valid_terminal_events.parquet` | Splits raw terminal hints from liquidation-safe terminal events. |
 | `build_symbol_aliases.py` | `data/research/symbol_aliases.parquet` | Curated ticker-change windows for resolving known alias periods. |
+| `build_corporate_action_evidence.py` | `data/research/corporate_action_evidence.parquet` | Curated SEC, Nasdaq Trader, and issuer IR source URLs for high-impact return events. |
+| `build_return_quality_flags.py` | `data/research/return_quality_flags.parquet` | Extreme close-to-close returns classified as split/scale exclusions, event risk, or manual review. |
 | `yahoo_delisted_probe` | `data/staging/yahoo_delisted_probe_daily_prices.parquet` | Recovered daily bars for SEC delisting candidates; accepts only USD `EQUITY` and `ETF` Yahoo metadata. |
 | `yahoo_fallback_downloader.py` | `data/staging/yahoo_fallback_daily_prices.parquet` | Active current-symbol daily bars plus forced ETF label seeds. |
 | `kaggle_delisted_loader.py` | `data/staging/kaggle_delisted_daily_prices.parquet` | Arandkei archive loader. |
@@ -66,8 +69,13 @@ Price validation rejects rows with null OHLC, non-positive OHLC, negative volume
 - OHLC above 100,000, usually split-adjusted scale artifacts rather than executable raw prices. `BRK.A` is explicitly allowed as a legitimate high-price class-share exception.
 - Extreme `close / adjusted_close` ratios outside `[0.001, 1000]`.
 - Zero-volume rows with close above 10,000.
+- Extreme close-to-close returns above 1,000% or below -95% are written to `return_quality_flags`.
+- `corporate_action_evidence` supplies clickable evidence for curated reverse splits, preferred/reference-price guards, news spikes, and trading suspensions.
+- Reverse-split and reference-price scale rows become `exclude_from_backtest_return = true`; sourced news spikes remain in raw prices and are tagged as `event_risk`.
 
 Flagged rows are written to `data/research/price_quality_flags.parquet`. `liquidity_metrics` keeps raw `dollar_volume` and `adv20`, and also computes quality-filtered `quality_dollar_volume`, `quality_adv20`, and `quality_traded_days_20`.
+
+Rows with `return_quality_flags.exclude_from_backtest_return = true` are treated as `is_price_quality_suspect` for liquidity and universe construction. The raw bars remain in `daily_prices` for auditability.
 
 `next_open` is computed against the global FONA trading calendar. A row is executable only when the same symbol has a positive open on the very next global trading date, and that next row is not price-quality-suspect.
 

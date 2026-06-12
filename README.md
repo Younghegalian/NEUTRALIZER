@@ -18,7 +18,7 @@
   <img alt="Daily bars" src="https://img.shields.io/badge/daily_bars-24.01M-243BFF?style=flat-square">
   <img alt="Symbols" src="https://img.shields.io/badge/symbols-11.8K-111111?style=flat-square">
   <img alt="SEC led" src="https://img.shields.io/badge/delisting_spine-SEC-1F6FEB?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-18_passing-2EA043?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-21_passing-2EA043?style=flat-square">
 </p>
 
 FONA, the Finance Open Network Archive, builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
@@ -37,6 +37,8 @@ This repository contains the pipeline, tests, documentation, and brand assets. G
 | Delisting outcome layer | `delisting_outcomes` classifies selected Form 25 exits and captures SEC cash consideration when extractable |
 | Valid terminal-event subset | `valid_terminal_events` filters raw terminal hints to liquidation-safe events |
 | Symbol alias map | `symbol_aliases` records curated ticker-change windows such as `FI -> FISV` |
+| Corporate-action evidence | `corporate_action_evidence` stores click-through SEC, Nasdaq Trader, and issuer IR sources for known split/news cases |
+| Return-quality guardrail | `return_quality_flags` marks split-like, scale-error, and event-risk daily returns before they pollute backtests |
 | Liquidity features | `liquidity_metrics` with raw and quality-filtered dollar volume, ADV20, traded days, and next open |
 | Quality gates | Unit tests, hard daily-bar audit, price-quality flags, and annual listing/delisting flow audit |
 
@@ -54,14 +56,17 @@ Latest local build:
 | Delisted-source symbols | 1,782 |
 | Trading dates | 4,249 |
 | Universe date range | 2010-01-25 to 2026-06-10 |
-| Universe memberships | 13,432,044 |
-| Lifecycle-adjusted memberships | 12,865,749 |
+| Universe memberships | 13,431,989 |
+| Lifecycle-adjusted memberships | 12,865,698 |
 | Security lifecycle events | 13,645 |
 | Terminal delisting events | 1,778 |
 | Delisting outcomes | 1,778 |
 | Delisting outcomes with exit value | 1,025 |
 | Valid terminal events | 610 |
 | Symbol aliases | 1 |
+| Corporate-action evidence rows | 16 |
+| Return quality flags | 1,661 |
+| Return exclusion candidates | 1,479 |
 | SEC Form 25 outcome docs parsed | 1,751 |
 | Price quality flags | 192,862 |
 | Median daily universe size | 2,991 |
@@ -99,7 +104,7 @@ SEC-led delisting discovery:
 | `security_master` | 11,813 | `symbol` | Asset type, ETF flag, instrument type, name, exchange, currency, CIK, SIC, sector, industry |
 | `liquidity_metrics` | 24,007,243 | `date, symbol` | Raw and quality-filtered dollar volume, ADV20, traded days, global-calendar next open |
 | `price_quality_flags` | 192,862 | `date, symbol` | Rows excluded from tradable universe construction by quality rules |
-| `universe_membership` | 13,432,044 | `date, universe, symbol` | Tradable universe membership by date |
+| `universe_membership` | 13,431,989 | `date, universe, symbol` | Tradable universe membership by date |
 | `universe_stats` | 4,232 | `date, universe` | Daily sanity metrics for universe size, median close, ADV, and volume |
 | `security_events` | 13,645 | `symbol, event` | Listing and delisting lifecycle events from price coverage, FMP, and SEC |
 | `terminal_events` | 1,778 | `symbol, event_date` | Last available terminal close on or before delisting event; no zero fill |
@@ -107,7 +112,9 @@ SEC-led delisting discovery:
 | `terminal_event_validity` | 1,778 | `symbol, event_date` | Terminal-event safety audit against later prices and universe membership |
 | `valid_terminal_events` | 610 | `symbol, event_date` | Liquidation-safe subset of terminal events |
 | `symbol_aliases` | 1 | `alias_symbol, date range` | Curated ticker-change alias windows |
-| `backtest_universe_membership` | 12,865,749 | `date, universe, symbol` | Lifecycle-adjusted backtest universe excluding post-delisting dates |
+| `corporate_action_evidence` | 16 | `symbol, event_date, event_type` | Verifiable source URLs for known reverse splits, reference-price guards, news spikes, and suspensions |
+| `return_quality_flags` | 1,661 | `date, symbol` | Extreme daily returns classified as exclusion candidates, event risk, or manual review |
+| `backtest_universe_membership` | 12,865,698 | `date, universe, symbol` | Lifecycle-adjusted backtest universe excluding post-delisting dates and clean-return exclusions |
 
 Price-bar source coverage:
 
@@ -146,9 +153,11 @@ Python helpers:
 ```python
 from src.db.query_examples import (
     get_backtest_universe,
+    get_corporate_action_evidence,
     get_delisting_outcomes,
     get_price_panel,
     get_prices,
+    get_return_quality_flags,
     get_security_master,
     get_symbol_aliases,
     get_universe,
@@ -163,6 +172,8 @@ metadata = get_security_master(symbols[:100])
 outcomes = get_delisting_outcomes(["SY", "IDC", "AMN"])
 valid_terminals = get_valid_terminal_events()
 aliases = get_symbol_aliases(["FI"])
+evidence = get_corporate_action_evidence(["COSM", "TTOO", "SCE.PN"])
+return_flags = get_return_quality_flags(["COSM", "TPST"], only_exclusions=False)
 ```
 
 Direct DuckDB:
@@ -204,6 +215,25 @@ WHERE u.date = DATE '2020-01-02'
 ORDER BY u.symbol;
 ```
 
+Return-quality evidence:
+
+```sql
+SELECT
+    symbol,
+    date,
+    prev_close,
+    close,
+    raw_return,
+    severity,
+    event_type,
+    exclude_from_backtest_return,
+    evidence_source_name,
+    evidence_url
+FROM return_quality_flags
+WHERE symbol IN ('COSM', 'TTOO', 'LICN', 'BINI', 'SCE.PN', 'TPST', 'QMMM', 'INHD')
+ORDER BY ABS(raw_return) DESC;
+```
+
 ## Source Model
 
 FONA uses SEC as the primary delisting discovery spine. SEC identifies delisting events and issuer CIKs; price collectors then recover the available OHLCV history for mapped tickers.
@@ -213,6 +243,7 @@ FONA uses SEC as the primary delisting discovery spine. SEC identifies delisting
 | Delisting discovery | SEC Form 25/25-NSE filings | Finds delisting events and issuer CIKs |
 | Ticker mapping | SEC Form 3/4/5 structured data | Maps CIKs to historical tickers where available |
 | Delisting outcome enrichment | SEC Form 25/25-NSE text | Extracts effective dates, outcome classes, and cash merger consideration where present |
+| Corporate-action evidence | SEC filings, Nasdaq Trader alerts, and issuer IR | Confirms reverse splits, reference-price guards, news spikes, and trading suspensions used by `return_quality_flags` |
 | Delisted OHLCV recovery | Yahoo chart API probe | Pulls daily bars for recoverable SEC candidate tickers |
 | Active OHLCV baseline | Yahoo chart API | Pulls current listed-symbol daily bars |
 | Supplemental delisted OHLCV | Kaggle Arandkei archive | Adds delisted historical bars available in the archive |
@@ -242,6 +273,8 @@ Price-quality policy:
 
 - `daily_prices` preserves raw provider bars for auditability.
 - `price_quality_flags` marks rows unsafe for tradable universe construction, including split-adjusted scale artifacts above 100,000 except `BRK.A`, extreme `close / adjusted_close` ratios, and zero-volume high-price rows.
+- `corporate_action_evidence` stores human-checkable source URLs for curated high-impact reverse splits, preferred/reference-price guards, news spikes, and trading suspensions.
+- `return_quality_flags` marks extreme close-to-close returns. Reverse-split and scale-error rows are `exclude_from_backtest_return = true`; sourced news spikes such as `TPST`, `QMMM`, and `INHD` remain raw but are tagged as `event_risk`.
 - `universe_membership` uses `quality_adv20`, `quality_traded_days_20`, and excludes `is_price_quality_suspect` rows.
 - `next_open` and `has_next_open` are computed against the global FONA trading calendar, so a symbol is eligible only when it has an executable open on the next calendar date.
 
@@ -264,11 +297,14 @@ The daily audit fails if any hard data-quality rule breaks:
 | Global-calendar next-open mismatches in universe | 0 |
 | Invalid rows inside `valid_terminal_events` | 0 |
 | Price-quality-suspect rows in universe tables | 0 |
+| Return-quality exclusion rows in universe tables | 0 |
+| Return-quality rows missing source price | 0 |
+| Corporate-action evidence rows missing URL | 0 |
 
 Latest validation:
 
 ```text
-Ran 18 tests
+Ran 21 tests
 OK
 
 [audit] OK
