@@ -18,7 +18,7 @@
   <img alt="Daily bars" src="https://img.shields.io/badge/daily_bars-23.96M-243BFF?style=flat-square">
   <img alt="Symbols" src="https://img.shields.io/badge/symbols-11.8K-111111?style=flat-square">
   <img alt="SEC led" src="https://img.shields.io/badge/delisting_spine-SEC-1F6FEB?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-13_passing-2EA043?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-14_passing-2EA043?style=flat-square">
 </p>
 
 FONA, the Finance Open Network Archive, builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
@@ -34,8 +34,8 @@ This repository contains the pipeline, tests, documentation, and brand assets. G
 | Security classification | `security_master` with stock/ETF/fund classification, exchange, CIK, SIC, sector, and industry fields |
 | Backtest universe | `universe_membership` rebuilt daily from price, volume, ADV20, and next-open eligibility |
 | Lifecycle-adjusted universe | `backtest_universe_membership` removes symbols after trusted delisting events |
-| Liquidity features | `liquidity_metrics` with dollar volume, ADV20, positive-volume traded days, and next open |
-| Quality gates | Unit tests, hard daily-bar audit, and annual listing/delisting flow audit |
+| Liquidity features | `liquidity_metrics` with raw and quality-filtered dollar volume, ADV20, traded days, and next open |
+| Quality gates | Unit tests, hard daily-bar audit, price-quality flags, and annual listing/delisting flow audit |
 
 ## Data Product Snapshot
 
@@ -51,11 +51,12 @@ Latest local build:
 | Delisted-source symbols | 1,782 |
 | Trading dates | 4,249 |
 | Universe date range | 2010-01-25 to 2026-06-09 |
-| Universe memberships | 13,740,815 |
-| Lifecycle-adjusted memberships | 13,162,013 |
+| Universe memberships | 13,713,150 |
+| Lifecycle-adjusted memberships | 13,134,975 |
 | Security lifecycle events | 13,635 |
 | Terminal delisting events | 1,778 |
-| Median daily universe size | 3,053 |
+| Price quality flags | 192,862 |
+| Median daily universe size | 3,045 |
 
 Security classification:
 
@@ -88,12 +89,13 @@ SEC-led delisting discovery:
 | `daily_prices` | 23,965,894 | `date, symbol` | Canonical OHLCV bars, adjusted close, source, delisted-source flag |
 | `symbol_master` | 11,803 | `symbol` | First/last price date, source list, active/delisted coverage flags |
 | `security_master` | 11,803 | `symbol` | Asset type, ETF flag, instrument type, name, exchange, currency, CIK, SIC, sector, industry |
-| `liquidity_metrics` | 23,965,894 | `date, symbol` | Dollar volume, ADV20, positive-volume traded days, next open |
-| `universe_membership` | 13,740,815 | `date, universe, symbol` | Tradable universe membership by date |
+| `liquidity_metrics` | 23,965,894 | `date, symbol` | Raw and quality-filtered dollar volume, ADV20, traded days, next open |
+| `price_quality_flags` | 192,862 | `date, symbol` | Rows excluded from tradable universe construction by quality rules |
+| `universe_membership` | 13,713,150 | `date, universe, symbol` | Tradable universe membership by date |
 | `universe_stats` | 4,231 | `date, universe` | Daily sanity metrics for universe size, median close, ADV, and volume |
 | `security_events` | 13,635 | `symbol, event` | Listing and delisting lifecycle events from price coverage, FMP, and SEC |
 | `terminal_events` | 1,778 | `symbol, event_date` | Last available terminal close on or before delisting event; no zero fill |
-| `backtest_universe_membership` | 13,162,013 | `date, universe, symbol` | Lifecycle-adjusted backtest universe excluding post-delisting dates |
+| `backtest_universe_membership` | 13,134,975 | `date, universe, symbol` | Lifecycle-adjusted backtest universe excluding post-delisting dates |
 
 Price-bar source coverage:
 
@@ -154,7 +156,7 @@ SELECT
     sm.asset_type,
     sm.sector,
     p.close,
-    l.adv20,
+    l.quality_adv20,
     l.next_open
 FROM universe_membership u
 JOIN daily_prices p USING (date, symbol)
@@ -214,6 +216,12 @@ Classification policy:
 - SEC submissions CIK/SIC metadata fills `cik`, `sic`, `sic_description`, and a SIC-derived sector when FMP sector/industry is missing.
 - SEC SIC sectors are coarse research buckets, not official GICS classifications.
 
+Price-quality policy:
+
+- `daily_prices` preserves raw provider bars for auditability.
+- `price_quality_flags` marks rows unsafe for tradable universe construction, including split-adjusted scale artifacts above 100,000 except `BRK.A`, extreme `close / adjusted_close` ratios, and zero-volume high-price rows.
+- `universe_membership` uses `quality_adv20`, `quality_traded_days_20`, and excludes `is_price_quality_suspect` rows.
+
 ## Quality Controls
 
 The daily audit fails if any hard data-quality rule breaks:
@@ -229,11 +237,12 @@ The daily audit fails if any hard data-quality rule breaks:
 | Future-dated rows | 0 |
 | Weekend rows | 0 |
 | Missing joins to symbol/security/liquidity/universe tables | 0 |
+| Price-quality-suspect rows in universe tables | 0 |
 
 Latest validation:
 
 ```text
-Ran 13 tests
+Ran 14 tests
 OK
 
 [audit] OK

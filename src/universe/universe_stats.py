@@ -32,13 +32,17 @@ def build_universe_stats_df(
         merged["is_delisted_source"] = False
 
     merged["is_delisted_source"] = merged["is_delisted_source"].fillna(False).astype(bool)
+    if "quality_adv20" not in merged.columns:
+        merged["quality_adv20"] = merged["adv20"]
+    if "quality_dollar_volume" not in merged.columns:
+        merged["quality_dollar_volume"] = merged["dollar_volume"]
     result = (
         merged.groupby(["date", "universe_name"], as_index=False)
         .agg(
             symbol_count=("symbol", "nunique"),
             median_close=("close", "median"),
-            median_adv20=("adv20", "median"),
-            total_dollar_volume=("dollar_volume", "sum"),
+            median_adv20=("quality_adv20", "median"),
+            total_dollar_volume=("quality_dollar_volume", "sum"),
             delisted_source_count=("is_delisted_source", "sum"),
         )
         .sort_values(["date", "universe_name"])

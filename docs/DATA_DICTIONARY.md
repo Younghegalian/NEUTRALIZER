@@ -52,11 +52,26 @@
 
 | Column | Description |
 | --- | --- |
-| `dollar_volume` | `close * volume`. |
-| `adv20` | Symbol-specific rolling 20-day mean dollar volume. |
+| `dollar_volume` | Raw `close * volume`. |
+| `quality_dollar_volume` | `dollar_volume`, set to zero for price-quality-suspect rows. |
+| `adv20` | Symbol-specific rolling 20-day mean raw dollar volume. |
+| `quality_adv20` | Symbol-specific rolling 20-day mean quality-filtered dollar volume used by the universe builder. |
 | `traded_days_20` | Positive-volume days in rolling 20-day window. |
+| `quality_traded_days_20` | Positive-volume non-suspect days in rolling 20-day window used by the universe builder. |
 | `next_open` | Next available open for the same symbol. |
-| `has_next_open` | True when `next_open` is available. |
+| `has_next_open` | True when `next_open` is available and the next row is not price-quality-suspect. |
+| `is_price_quality_suspect` | True for rows flagged as unsafe for tradable universe construction. |
+
+## `price_quality_flags`
+
+| Column | Description |
+| --- | --- |
+| `date` | Flagged trading date. |
+| `symbol` | Flagged symbol. |
+| `source` | Price source. |
+| `flag_reason` | Semicolon-separated quality reasons. |
+| `open`, `high`, `low`, `close`, `volume`, `adjusted_close` | Flagged raw price row values. |
+| `close_adjusted_ratio` | `close / adjusted_close` when adjusted close is positive. |
 
 ## `universe_membership`
 

@@ -59,10 +59,10 @@ The script:
 8. Refreshes cached FMP profile metadata up to `FONA_FMP_PROFILE_LIMIT`.
 9. Refreshes cached SEC CIK/SIC metadata up to `FONA_SEC_COMPANY_LIMIT`.
 10. Rebuilds `security_master`.
-11. Recomputes liquidity metrics and universe tables.
+11. Recomputes price-quality flags, liquidity metrics, and universe tables.
 12. Rebuilds lifecycle events, terminal events, and the lifecycle-adjusted backtest universe.
 13. Rebuilds `data/pit_market.duckdb`.
-14. Audits daily-bar grain, nulls, OHLC validity, date validity, and table integrity.
+14. Audits daily-bar grain, nulls, OHLC validity, date validity, price-quality exclusions, and table integrity.
 15. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
 16. Runs unit tests.
 

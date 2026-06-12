@@ -28,6 +28,7 @@ def build_duckdb(
     security_events_path: Path = config.SECURITY_EVENTS_PATH,
     terminal_events_path: Path = config.TERMINAL_EVENTS_PATH,
     backtest_universe_membership_path: Path = config.BACKTEST_UNIVERSE_MEMBERSHIP_PATH,
+    price_quality_flags_path: Path = config.PRICE_QUALITY_FLAGS_PATH,
 ) -> Path:
     import duckdb
 
@@ -44,6 +45,7 @@ def build_duckdb(
             "security_events",
             "terminal_events",
             "backtest_universe_membership",
+            "price_quality_flags",
         ]:
             con.execute(f"DROP TABLE IF EXISTS {table}")
 
@@ -106,10 +108,14 @@ def build_duckdb(
                 close DOUBLE,
                 volume BIGINT,
                 dollar_volume DOUBLE,
+                quality_dollar_volume DOUBLE,
                 adv20 DOUBLE,
+                quality_adv20 DOUBLE,
                 traded_days_20 INTEGER,
+                quality_traded_days_20 INTEGER,
                 next_open DOUBLE,
-                has_next_open BOOLEAN
+                has_next_open BOOLEAN,
+                is_price_quality_suspect BOOLEAN
             )
             """
         )
@@ -175,6 +181,23 @@ def build_duckdb(
                 universe_name TEXT,
                 symbol TEXT,
                 reason TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE price_quality_flags (
+                date DATE,
+                symbol TEXT,
+                source TEXT,
+                flag_reason TEXT,
+                open DOUBLE,
+                high DOUBLE,
+                low DOUBLE,
+                close DOUBLE,
+                volume BIGINT,
+                adjusted_close DOUBLE,
+                close_adjusted_ratio DOUBLE
             )
             """
         )
@@ -250,10 +273,14 @@ def build_duckdb(
                 CAST(close AS DOUBLE),
                 CAST(volume AS BIGINT),
                 CAST(dollar_volume AS DOUBLE),
+                CAST(quality_dollar_volume AS DOUBLE),
                 CAST(adv20 AS DOUBLE),
+                CAST(quality_adv20 AS DOUBLE),
                 CAST(traded_days_20 AS INTEGER),
+                CAST(quality_traded_days_20 AS INTEGER),
                 CAST(next_open AS DOUBLE),
-                CAST(has_next_open AS BOOLEAN)
+                CAST(has_next_open AS BOOLEAN),
+                CAST(is_price_quality_suspect AS BOOLEAN)
             FROM read_parquet('{path}')
             """,
         )
@@ -337,6 +364,26 @@ def build_duckdb(
             FROM read_parquet('{path}')
             """,
         )
+        _insert_from_parquet(
+            con,
+            "price_quality_flags",
+            price_quality_flags_path,
+            """
+            SELECT
+                CAST(date AS DATE),
+                CAST(symbol AS TEXT),
+                CAST(source AS TEXT),
+                CAST(flag_reason AS TEXT),
+                CAST(open AS DOUBLE),
+                CAST(high AS DOUBLE),
+                CAST(low AS DOUBLE),
+                CAST(close AS DOUBLE),
+                CAST(volume AS BIGINT),
+                CAST(adjusted_close AS DOUBLE),
+                CAST(close_adjusted_ratio AS DOUBLE)
+            FROM read_parquet('{path}')
+            """,
+        )
 
         con.execute("CREATE INDEX IF NOT EXISTS idx_prices_date_symbol ON daily_prices(date, symbol)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_security_symbol ON security_master(symbol)")
@@ -350,6 +397,7 @@ def build_duckdb(
             "CREATE INDEX IF NOT EXISTS idx_backtest_universe_date_name "
             "ON backtest_universe_membership(date, universe_name)"
         )
+        con.execute("CREATE INDEX IF NOT EXISTS idx_price_quality_flags_symbol ON price_quality_flags(symbol, date)")
     finally:
         con.close()
 

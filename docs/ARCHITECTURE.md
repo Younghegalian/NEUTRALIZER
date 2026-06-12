@@ -13,7 +13,7 @@ SEC delisting discovery
   -> symbol_master
   -> SEC CIK/SIC metadata
   -> security_master
-  -> liquidity_metrics
+  -> price_quality_flags / liquidity_metrics
   -> universe_membership
   -> security_events / terminal_events
   -> backtest_universe_membership
@@ -53,6 +53,16 @@ Source priority:
 
 Price validation rejects rows with null OHLC, non-positive OHLC, negative volume, `high < low`, or `open`/`close` outside the `[low, high]` range.
 
+## Price Quality Layer
+
+`src/universe/compute_liquidity.py` preserves raw `daily_prices` but flags rows that are unsafe for tradable universe construction:
+
+- OHLC above 100,000, usually split-adjusted scale artifacts rather than executable raw prices. `BRK.A` is explicitly allowed as a legitimate high-price class-share exception.
+- Extreme `close / adjusted_close` ratios outside `[0.001, 1000]`.
+- Zero-volume rows with close above 10,000.
+
+Flagged rows are written to `data/research/price_quality_flags.parquet`. `liquidity_metrics` keeps raw `dollar_volume` and `adv20`, and also computes quality-filtered `quality_dollar_volume`, `quality_adv20`, and `quality_traded_days_20`.
+
 ## Security Master
 
 `src/normalize/build_security_master.py` builds asset classification separately from price coverage.
@@ -81,9 +91,10 @@ Eligibility:
 
 ```text
 close >= 1.00
-adv20 >= 1,000,000
-traded_days_20 >= 15
+quality_adv20 >= 1,000,000
+quality_traded_days_20 >= 15
 has_next_open == true
+is_price_quality_suspect == false
 ```
 
 `traded_days_20` counts only rows with positive volume.

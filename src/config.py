@@ -42,6 +42,7 @@ UNIVERSE_STATS_PATH = RESEARCH_DIR / "universe_stats.parquet"
 SECURITY_EVENTS_PATH = RESEARCH_DIR / "security_events.parquet"
 TERMINAL_EVENTS_PATH = RESEARCH_DIR / "terminal_events.parquet"
 BACKTEST_UNIVERSE_MEMBERSHIP_PATH = RESEARCH_DIR / "backtest_universe_membership.parquet"
+PRICE_QUALITY_FLAGS_PATH = RESEARCH_DIR / "price_quality_flags.parquet"
 
 DUCKDB_PATH = DATA_DIR / "pit_market.duckdb"
 UNIVERSE_NAME = "US_DAILY_SURVIVORSHIP_REDUCED_V1"
@@ -95,10 +96,27 @@ LIQUIDITY_COLUMNS = [
     "close",
     "volume",
     "dollar_volume",
+    "quality_dollar_volume",
     "adv20",
+    "quality_adv20",
     "traded_days_20",
+    "quality_traded_days_20",
     "next_open",
     "has_next_open",
+    "is_price_quality_suspect",
+]
+PRICE_QUALITY_FLAG_COLUMNS = [
+    "date",
+    "symbol",
+    "source",
+    "flag_reason",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "adjusted_close",
+    "close_adjusted_ratio",
 ]
 
 UNIVERSE_COLUMNS = ["date", "universe_name", "symbol", "reason"]

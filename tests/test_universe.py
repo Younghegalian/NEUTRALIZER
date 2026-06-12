@@ -147,6 +147,33 @@ class UniverseTest(unittest.TestCase):
         universe = build_universe_df(liquidity, universe_name=config.UNIVERSE_NAME)
         self.assertEqual(set(universe["symbol"]), {"GOOD"})
 
+    def test_price_quality_suspect_rows_do_not_enter_universe(self) -> None:
+        dates = pd.date_range("2020-01-01", periods=21, freq="D")
+        prices = pd.DataFrame(
+            [
+                {
+                    "date": date.date(),
+                    "symbol": "SPLITBAD",
+                    "vendor_symbol": "SPLITBAD",
+                    "open": 2_000_000,
+                    "high": 2_000_000,
+                    "low": 2_000_000,
+                    "close": 2_000_000,
+                    "volume": 10_000,
+                    "adjusted_close": 2_000_000,
+                    "source": "yahoo_fallback",
+                    "is_delisted_source": False,
+                }
+                for date in dates
+            ]
+        )
+
+        liquidity = compute_liquidity_metrics_df(prices)
+        universe = build_universe_df(liquidity, universe_name=config.UNIVERSE_NAME)
+
+        self.assertTrue(liquidity["is_price_quality_suspect"].all())
+        self.assertTrue(universe.empty)
+
     def test_backtest_universe_removes_dates_after_delisting_event(self) -> None:
         symbol_master = pd.DataFrame(
             [

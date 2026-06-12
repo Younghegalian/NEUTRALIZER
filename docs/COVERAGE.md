@@ -36,8 +36,8 @@ Latest lifecycle build:
 | Selected terminal delisting events | 1,778 |
 | Terminal events with price | 1,013 |
 | Zero terminal prices | 0 |
-| Lifecycle-adjusted universe memberships | 13,162,013 |
-| Base universe rows removed by lifecycle policy | 578,802 |
+| Lifecycle-adjusted universe memberships | 13,134,975 |
+| Base universe rows removed by lifecycle policy | 578,175 |
 | Membership rows after selected delisting event | 0 |
 
 Delisting events are applied only to symbols with delisted-source price coverage. This reduces ticker-reuse false positives, but it also means unpriced delisting candidates remain coverage gaps rather than simulated zero-price rows.
@@ -83,6 +83,10 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 
 | Check | Result |
 | --- | ---: |
+| Price quality flagged rows | 192,862 |
+| Price quality flagged symbols | 242 |
+| Price-quality-suspect rows in base universe | 0 |
+| Price-quality-suspect rows in backtest universe | 0 |
 | Duplicate `(date, symbol)` keys | 0 |
 | Null required OHLCV fields | 0 |
 | Non-positive OHLC rows | 0 |
@@ -102,6 +106,7 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 - Terminal event prices are last available closes, not CRSP-style delisting returns.
 - Kaggle and FMP coverage depends on available plan/data limits.
 - Yahoo adjusted historical prices and vendor volume can still distort dollar-volume estimates for heavily split-adjusted securities.
+- Rows with extreme split-adjusted scale are flagged and excluded from universe construction, but raw rows remain in `daily_prices` for provenance and debugging.
 - SEC SIC-derived sector coverage is broad for operating companies, but it is not a vendor-grade GICS history.
 - ETF classification is intentionally not forced through SEC SIC because fund issuers do not describe ETF holdings exposure.
 

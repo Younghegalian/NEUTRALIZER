@@ -39,7 +39,9 @@ integrity_checks AS (
         (SELECT COUNT(*) FROM liquidity_metrics l LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS liquidity_without_price,
         (SELECT COUNT(*) FROM universe_membership u LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS universe_without_price,
         (SELECT COUNT(*) FROM backtest_universe_membership u LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS backtest_universe_without_price,
-        (SELECT COUNT(*) FROM terminal_events t LEFT JOIN symbol_master s USING(symbol) WHERE s.symbol IS NULL) AS terminal_events_missing_symbol_master
+        (SELECT COUNT(*) FROM terminal_events t LEFT JOIN symbol_master s USING(symbol) WHERE s.symbol IS NULL) AS terminal_events_missing_symbol_master,
+        (SELECT COUNT(*) FROM universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS universe_price_quality_suspect,
+        (SELECT COUNT(*) FROM backtest_universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS backtest_universe_price_quality_suspect
 )
 SELECT 'duplicate_keys' AS check_name, COUNT(*)::DOUBLE AS value FROM duplicate_keys
 UNION ALL SELECT 'duplicate_affected_rows', COALESCE(SUM(row_count), 0)::DOUBLE FROM duplicate_keys
@@ -62,6 +64,8 @@ UNION ALL SELECT 'liquidity_without_price', liquidity_without_price FROM integri
 UNION ALL SELECT 'universe_without_price', universe_without_price FROM integrity_checks
 UNION ALL SELECT 'backtest_universe_without_price', backtest_universe_without_price FROM integrity_checks
 UNION ALL SELECT 'terminal_events_missing_symbol_master', terminal_events_missing_symbol_master FROM integrity_checks
+UNION ALL SELECT 'universe_price_quality_suspect', universe_price_quality_suspect FROM integrity_checks
+UNION ALL SELECT 'backtest_universe_price_quality_suspect', backtest_universe_price_quality_suspect FROM integrity_checks
 ORDER BY check_name
 """
 
@@ -93,6 +97,17 @@ ORDER BY rows DESC
 """
 
 
+QUALITY_SQL = """
+SELECT
+    COUNT(*) AS flagged_rows,
+    COUNT(DISTINCT symbol) AS flagged_symbols,
+    COUNT(*) FILTER (WHERE flag_reason LIKE '%extreme_ohlc%') AS extreme_ohlc_rows,
+    COUNT(*) FILTER (WHERE flag_reason LIKE '%extreme_close_adjusted_ratio%') AS extreme_ratio_rows,
+    COUNT(*) FILTER (WHERE flag_reason LIKE '%zero_volume_close%') AS zero_volume_high_price_rows
+FROM price_quality_flags
+"""
+
+
 def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
     if not db_path.exists():
         raise FileNotFoundError(f"Missing DuckDB database: {db_path}")
@@ -100,6 +115,7 @@ def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
     with duckdb.connect(str(db_path), read_only=True) as con:
         profile = con.execute(PROFILE_SQL).fetchdf()
         sources = con.execute(SOURCE_SQL).fetchdf()
+        quality = con.execute(QUALITY_SQL).fetchdf()
         hard_checks = con.execute(HARD_CHECK_SQL).fetchdf()
 
     print("[audit] daily_prices profile")
@@ -107,6 +123,9 @@ def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
     print()
     print("[audit] source profile")
     print(sources.to_string(index=False))
+    print()
+    print("[audit] price quality flags")
+    print(quality.to_string(index=False))
     print()
     print("[audit] hard checks")
     print(hard_checks.to_string(index=False))
