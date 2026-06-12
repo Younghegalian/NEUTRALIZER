@@ -11,6 +11,7 @@ from src.universe.build_backtest_universe import (
     build_terminal_events_df,
     select_delisting_events,
 )
+from src.universe.build_delisting_outcomes import build_delisting_outcomes_df
 from src.universe.build_universe import build_universe_df
 from src.universe.compute_liquidity import compute_liquidity_metrics_df
 
@@ -314,6 +315,94 @@ class UniverseTest(unittest.TestCase):
         self.assertAlmostEqual(row["terminal_return"], -0.5)
         self.assertTrue(row["has_terminal_price"])
         self.assertNotEqual(row["terminal_price"], 0)
+
+    def test_delisting_outcomes_use_effective_date_when_available(self) -> None:
+        terminal_events = pd.DataFrame(
+            [
+                {
+                    "symbol": "DEAD",
+                    "event_date": "2020-01-03",
+                    "terminal_date": "2020-01-02",
+                    "terminal_price": 5,
+                    "previous_close": 10,
+                    "terminal_return": -0.5,
+                    "has_terminal_price": True,
+                    "price_source": "yahoo_delisted_probe",
+                    "event_source": "sec_form25_date_filed",
+                    "event_confidence": "proxy",
+                    "terminal_policy": "test",
+                    "notes": "test",
+                }
+            ],
+            columns=config.TERMINAL_EVENTS_COLUMNS,
+        )
+        daily_prices = pd.DataFrame(
+            [
+                {
+                    "date": "2020-01-02",
+                    "symbol": "DEAD",
+                    "vendor_symbol": "DEAD",
+                    "open": 5,
+                    "high": 5,
+                    "low": 5,
+                    "close": 5,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "yahoo_delisted_probe",
+                    "is_delisted_source": True,
+                },
+                {
+                    "date": "2020-01-04",
+                    "symbol": "DEAD",
+                    "vendor_symbol": "DEAD",
+                    "open": 2,
+                    "high": 2,
+                    "low": 2,
+                    "close": 2,
+                    "volume": 100,
+                    "adjusted_close": None,
+                    "source": "yahoo_delisted_probe",
+                    "is_delisted_source": True,
+                },
+            ],
+            columns=config.CANONICAL_PRICE_COLUMNS,
+        )
+        sec_docs = pd.DataFrame(
+            [
+                {
+                    "symbol": "DEAD",
+                    "event_date": "2020-01-03",
+                    "cik": 1,
+                    "company_name": "Dead Co.",
+                    "form_type": "25",
+                    "date_filed": "2020-01-03",
+                    "filename": "edgar/data/1/test.txt",
+                    "candidate_symbol": "DEAD",
+                    "ticker_source": "sec_form345",
+                    "candidate_symbol_count_for_filing": 1,
+                    "security_description": "Common Stock",
+                    "signature_date": "2020-01-03",
+                    "effective_date": "2020-01-04",
+                    "symbols_in_doc": "DEAD",
+                    "text_available": True,
+                    "outcome_type": "merger_or_acquisition",
+                    "outcome_confidence": "medium",
+                    "outcome_source": "sec_form25_text",
+                    "evidence": "merger",
+                }
+            ],
+            columns=config.SEC_DELISTING_OUTCOME_DOC_COLUMNS,
+        )
+
+        outcomes = build_delisting_outcomes_df(terminal_events, daily_prices, sec_docs)
+        row = outcomes.iloc[0]
+
+        self.assertEqual(row["exit_date"].strftime("%Y-%m-%d"), "2020-01-04")
+        self.assertEqual(row["exit_date_source"], "sec_form25_effective_date")
+        self.assertEqual(row["exit_price_date"].strftime("%Y-%m-%d"), "2020-01-04")
+        self.assertEqual(row["exit_price"], 2)
+        self.assertAlmostEqual(row["exit_return"], -0.6)
+        self.assertEqual(row["outcome_type"], "merger_or_acquisition")
 
 
 if __name__ == "__main__":

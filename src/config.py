@@ -27,6 +27,7 @@ SEC_DELISTING_FILINGS_PATH = STAGING_DIR / "sec_delisting_filings.parquet"
 SEC_FORM345_TICKER_MAP_PATH = STAGING_DIR / "sec_form345_ticker_map.parquet"
 SEC_DELISTED_CANDIDATES_PATH = STAGING_DIR / "sec_delisted_candidates.parquet"
 SEC_COMPANY_METADATA_PATH = STAGING_DIR / "sec_company_metadata.parquet"
+SEC_DELISTING_OUTCOME_DOCS_PATH = STAGING_DIR / "sec_delisting_outcome_documents.parquet"
 YAHOO_DELISTED_PROBE_STAGING_PATH = STAGING_DIR / "yahoo_delisted_probe_daily_prices.parquet"
 YAHOO_DELISTED_COVERAGE_PATH = RESEARCH_DIR / "yahoo_delisted_probe_coverage.parquet"
 
@@ -41,6 +42,7 @@ UNIVERSE_MEMBERSHIP_PATH = RESEARCH_DIR / "universe_membership.parquet"
 UNIVERSE_STATS_PATH = RESEARCH_DIR / "universe_stats.parquet"
 SECURITY_EVENTS_PATH = RESEARCH_DIR / "security_events.parquet"
 TERMINAL_EVENTS_PATH = RESEARCH_DIR / "terminal_events.parquet"
+DELISTING_OUTCOMES_PATH = RESEARCH_DIR / "delisting_outcomes.parquet"
 BACKTEST_UNIVERSE_MEMBERSHIP_PATH = RESEARCH_DIR / "backtest_universe_membership.parquet"
 PRICE_QUALITY_FLAGS_PATH = RESEARCH_DIR / "price_quality_flags.parquet"
 
@@ -142,6 +144,63 @@ TERMINAL_EVENTS_COLUMNS = [
     "event_source",
     "event_confidence",
     "terminal_policy",
+    "notes",
+]
+SEC_DELISTING_OUTCOME_DOC_COLUMNS = [
+    "symbol",
+    "event_date",
+    "cik",
+    "company_name",
+    "form_type",
+    "date_filed",
+    "filename",
+    "candidate_symbol",
+    "ticker_source",
+    "candidate_symbol_count_for_filing",
+    "security_description",
+    "signature_date",
+    "effective_date",
+    "symbols_in_doc",
+    "text_available",
+    "outcome_type",
+    "outcome_confidence",
+    "outcome_source",
+    "evidence",
+    "cash_consideration_per_share",
+    "cash_consideration_source",
+    "cash_consideration_is_partial",
+]
+DELISTING_OUTCOMES_COLUMNS = [
+    "symbol",
+    "event_date",
+    "effective_date",
+    "exit_date",
+    "exit_date_source",
+    "exit_price_date",
+    "exit_price",
+    "previous_close",
+    "exit_return",
+    "has_exit_price",
+    "cash_consideration_per_share",
+    "cash_consideration_is_partial",
+    "cash_consideration_price_ratio",
+    "exit_value",
+    "exit_value_return",
+    "exit_value_source",
+    "has_exit_value",
+    "price_source",
+    "event_source",
+    "event_confidence",
+    "outcome_type",
+    "outcome_confidence",
+    "outcome_source",
+    "sec_filename",
+    "sec_form_type",
+    "sec_company_name",
+    "sec_ticker_source",
+    "candidate_symbol_count",
+    "policy",
+    "evidence",
     "notes",
 ]
 BACKTEST_UNIVERSE_COLUMNS = ["date", "universe_name", "symbol", "reason"]

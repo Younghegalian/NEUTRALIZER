@@ -61,10 +61,11 @@ The script:
 10. Rebuilds `security_master`.
 11. Recomputes price-quality flags, liquidity metrics, and universe tables.
 12. Rebuilds lifecycle events, terminal events, and the lifecycle-adjusted backtest universe.
-13. Rebuilds `data/pit_market.duckdb`.
-14. Audits daily-bar grain, nulls, OHLC validity, date validity, price-quality exclusions, and table integrity.
-15. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
-16. Runs unit tests.
+13. Rebuilds delisting outcome enrichment from selected SEC Form 25 documents.
+14. Rebuilds `data/pit_market.duckdb`.
+15. Audits daily-bar grain, nulls, OHLC validity, date validity, price-quality exclusions, delisting outcome joins, and table integrity.
+16. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
+17. Runs unit tests.
 
 ## Faster Manual Runs
 
@@ -96,7 +97,14 @@ python -m src.run_pipeline --step security_master
 python -m src.run_pipeline --step liquidity
 python -m src.run_pipeline --step universe
 python -m src.run_pipeline --step backtest_universe
+python -m src.run_pipeline --step delisting_outcomes
 python -m src.run_pipeline --step duckdb
+```
+
+Rebuild delisting outcomes from cached SEC documents only:
+
+```powershell
+python -m src.run_pipeline --step delisting_outcomes --skip-delisting-outcome-doc-fetch
 ```
 
 Audit the current DuckDB daily bars:

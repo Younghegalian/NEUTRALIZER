@@ -104,6 +104,28 @@ def get_security_master(
         con.close()
 
 
+def get_delisting_outcomes(
+    symbols: list[str] | None = None,
+    db_path: Path = config.DUCKDB_PATH,
+) -> pd.DataFrame:
+    con = _connect(db_path)
+    try:
+        if not symbols:
+            return con.execute("SELECT * FROM delisting_outcomes ORDER BY event_date, symbol").fetchdf()
+        placeholders = ",".join(["?"] * len(symbols))
+        return con.execute(
+            f"""
+            SELECT *
+            FROM delisting_outcomes
+            WHERE symbol IN ({placeholders})
+            ORDER BY event_date, symbol
+            """,
+            symbols,
+        ).fetchdf()
+    finally:
+        con.close()
+
+
 def get_price_panel(
     start_date: str,
     end_date: str,

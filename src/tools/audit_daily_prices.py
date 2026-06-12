@@ -40,6 +40,14 @@ integrity_checks AS (
         (SELECT COUNT(*) FROM universe_membership u LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS universe_without_price,
         (SELECT COUNT(*) FROM backtest_universe_membership u LEFT JOIN daily_prices p USING(date, symbol) WHERE p.symbol IS NULL) AS backtest_universe_without_price,
         (SELECT COUNT(*) FROM terminal_events t LEFT JOIN symbol_master s USING(symbol) WHERE s.symbol IS NULL) AS terminal_events_missing_symbol_master,
+        (SELECT COUNT(*) FROM delisting_outcomes o LEFT JOIN symbol_master s USING(symbol) WHERE s.symbol IS NULL) AS delisting_outcomes_missing_symbol_master,
+        (
+            SELECT COUNT(*)
+            FROM delisting_outcomes o
+            LEFT JOIN terminal_events t USING(symbol, event_date)
+            WHERE t.symbol IS NULL
+        ) AS delisting_outcomes_without_terminal_event,
+        (SELECT COUNT(*) FROM delisting_outcomes WHERE exit_date IS NULL) AS delisting_outcomes_missing_exit_date,
         (SELECT COUNT(*) FROM universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS universe_price_quality_suspect,
         (SELECT COUNT(*) FROM backtest_universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS backtest_universe_price_quality_suspect
 )
@@ -64,6 +72,9 @@ UNION ALL SELECT 'liquidity_without_price', liquidity_without_price FROM integri
 UNION ALL SELECT 'universe_without_price', universe_without_price FROM integrity_checks
 UNION ALL SELECT 'backtest_universe_without_price', backtest_universe_without_price FROM integrity_checks
 UNION ALL SELECT 'terminal_events_missing_symbol_master', terminal_events_missing_symbol_master FROM integrity_checks
+UNION ALL SELECT 'delisting_outcomes_missing_symbol_master', delisting_outcomes_missing_symbol_master FROM integrity_checks
+UNION ALL SELECT 'delisting_outcomes_without_terminal_event', delisting_outcomes_without_terminal_event FROM integrity_checks
+UNION ALL SELECT 'delisting_outcomes_missing_exit_date', delisting_outcomes_missing_exit_date FROM integrity_checks
 UNION ALL SELECT 'universe_price_quality_suspect', universe_price_quality_suspect FROM integrity_checks
 UNION ALL SELECT 'backtest_universe_price_quality_suspect', backtest_universe_price_quality_suspect FROM integrity_checks
 ORDER BY check_name
@@ -108,6 +119,19 @@ FROM price_quality_flags
 """
 
 
+DELISTING_OUTCOME_SQL = """
+SELECT
+    COUNT(*) AS outcomes,
+    SUM(CASE WHEN has_exit_price THEN 1 ELSE 0 END) AS with_exit_price,
+    SUM(CASE WHEN has_exit_value THEN 1 ELSE 0 END) AS with_exit_value,
+    COUNT(*) FILTER (WHERE cash_consideration_per_share IS NOT NULL) AS with_cash_consideration,
+    COUNT(*) FILTER (WHERE effective_date IS NOT NULL) AS with_effective_date,
+    COUNT(DISTINCT outcome_type) AS outcome_types,
+    COUNT(*) FILTER (WHERE outcome_type = 'unknown') AS unknown_outcomes
+FROM delisting_outcomes
+"""
+
+
 def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
     if not db_path.exists():
         raise FileNotFoundError(f"Missing DuckDB database: {db_path}")
@@ -116,6 +140,7 @@ def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
         profile = con.execute(PROFILE_SQL).fetchdf()
         sources = con.execute(SOURCE_SQL).fetchdf()
         quality = con.execute(QUALITY_SQL).fetchdf()
+        delisting_outcomes = con.execute(DELISTING_OUTCOME_SQL).fetchdf()
         hard_checks = con.execute(HARD_CHECK_SQL).fetchdf()
 
     print("[audit] daily_prices profile")
@@ -126,6 +151,9 @@ def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
     print()
     print("[audit] price quality flags")
     print(quality.to_string(index=False))
+    print()
+    print("[audit] delisting outcomes")
+    print(delisting_outcomes.to_string(index=False))
     print()
     print("[audit] hard checks")
     print(hard_checks.to_string(index=False))

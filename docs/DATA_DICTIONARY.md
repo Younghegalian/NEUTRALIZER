@@ -112,6 +112,42 @@
 | `terminal_policy` | Exit-price policy used to build the row. |
 | `notes` | Terminal-price caveat. |
 
+## `delisting_outcomes`
+
+| Column | Description |
+| --- | --- |
+| `symbol` | Internal symbol. |
+| `event_date` | Selected delisting event date from `terminal_events`. |
+| `effective_date` | SEC Form 25 effective date when extractable. |
+| `exit_date` | `effective_date` when available, otherwise `event_date`. |
+| `exit_date_source` | Whether the exit date came from SEC Form 25 effective-date text or the selected delisting event. |
+| `exit_price_date` | Last available price date on or before `exit_date`. |
+| `exit_price` | Last available close on or before `exit_date`; never zero-filled. |
+| `previous_close` | Previous available close before `exit_price_date`. |
+| `exit_return` | `exit_price / previous_close - 1` when available. |
+| `has_exit_price` | True when an observed exit price was found. |
+| `cash_consideration_per_share` | SEC Form 25 cash consideration per share when extractable. |
+| `cash_consideration_is_partial` | True when the cash amount appears to be only one component of mixed cash/stock consideration. |
+| `cash_consideration_price_ratio` | Cash consideration divided by comparable observed price when available. |
+| `exit_value` | Preferred terminal value: clean SEC cash consideration when usable, otherwise observed `exit_price`. |
+| `exit_value_return` | `exit_value / previous_close - 1` when available. |
+| `exit_value_source` | `sec_cash_consideration` or `observed_exit_price`. |
+| `has_exit_value` | True when either a usable observed exit price or usable cash consideration exists. |
+| `price_source` | Source of the observed exit price row. |
+| `event_source` | Source of the selected delisting event. |
+| `event_confidence` | Confidence of the selected delisting event. |
+| `outcome_type` | Best-effort Form 25 text classification, such as `listing_standards_failure`, `merger_or_acquisition`, `bankruptcy_or_liquidation`, `exchange_transfer_or_market_change`, or `unknown`. |
+| `outcome_confidence` | Rule confidence for `outcome_type`. |
+| `outcome_source` | Source used for outcome classification. |
+| `sec_filename` | SEC archive filename for the matched Form 25/25-NSE filing. |
+| `sec_form_type` | SEC form type. |
+| `sec_company_name` | Company name from the SEC index. |
+| `sec_ticker_source` | Source used to map the SEC filing to the local ticker. |
+| `candidate_symbol_count` | Number of candidate symbols mapped to the filing. |
+| `policy` | Exit-value policy used to build the row. |
+| `evidence` | Short text snippet supporting outcome classification. |
+| `notes` | Exit-value caveat. |
+
 ## `backtest_universe_membership`
 
 | Column | Description |

@@ -27,6 +27,7 @@ def build_duckdb(
     universe_stats_path: Path = config.UNIVERSE_STATS_PATH,
     security_events_path: Path = config.SECURITY_EVENTS_PATH,
     terminal_events_path: Path = config.TERMINAL_EVENTS_PATH,
+    delisting_outcomes_path: Path = config.DELISTING_OUTCOMES_PATH,
     backtest_universe_membership_path: Path = config.BACKTEST_UNIVERSE_MEMBERSHIP_PATH,
     price_quality_flags_path: Path = config.PRICE_QUALITY_FLAGS_PATH,
 ) -> Path:
@@ -44,6 +45,7 @@ def build_duckdb(
             "universe_stats",
             "security_events",
             "terminal_events",
+            "delisting_outcomes",
             "backtest_universe_membership",
             "price_quality_flags",
         ]:
@@ -170,6 +172,43 @@ def build_duckdb(
                 event_source TEXT,
                 event_confidence TEXT,
                 terminal_policy TEXT,
+                notes TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE delisting_outcomes (
+                symbol TEXT,
+                event_date DATE,
+                effective_date DATE,
+                exit_date DATE,
+                exit_date_source TEXT,
+                exit_price_date DATE,
+                exit_price DOUBLE,
+                previous_close DOUBLE,
+                exit_return DOUBLE,
+                has_exit_price BOOLEAN,
+                cash_consideration_per_share DOUBLE,
+                cash_consideration_is_partial BOOLEAN,
+                cash_consideration_price_ratio DOUBLE,
+                exit_value DOUBLE,
+                exit_value_return DOUBLE,
+                exit_value_source TEXT,
+                has_exit_value BOOLEAN,
+                price_source TEXT,
+                event_source TEXT,
+                event_confidence TEXT,
+                outcome_type TEXT,
+                outcome_confidence TEXT,
+                outcome_source TEXT,
+                sec_filename TEXT,
+                sec_form_type TEXT,
+                sec_company_name TEXT,
+                sec_ticker_source TEXT,
+                candidate_symbol_count BIGINT,
+                policy TEXT,
+                evidence TEXT,
                 notes TEXT
             )
             """
@@ -353,6 +392,46 @@ def build_duckdb(
         )
         _insert_from_parquet(
             con,
+            "delisting_outcomes",
+            delisting_outcomes_path,
+            """
+            SELECT
+                CAST(symbol AS TEXT),
+                CAST(event_date AS DATE),
+                CAST(effective_date AS DATE),
+                CAST(exit_date AS DATE),
+                CAST(exit_date_source AS TEXT),
+                CAST(exit_price_date AS DATE),
+                CAST(exit_price AS DOUBLE),
+                CAST(previous_close AS DOUBLE),
+                CAST(exit_return AS DOUBLE),
+                CAST(has_exit_price AS BOOLEAN),
+                CAST(cash_consideration_per_share AS DOUBLE),
+                CAST(cash_consideration_is_partial AS BOOLEAN),
+                CAST(cash_consideration_price_ratio AS DOUBLE),
+                CAST(exit_value AS DOUBLE),
+                CAST(exit_value_return AS DOUBLE),
+                CAST(exit_value_source AS TEXT),
+                CAST(has_exit_value AS BOOLEAN),
+                CAST(price_source AS TEXT),
+                CAST(event_source AS TEXT),
+                CAST(event_confidence AS TEXT),
+                CAST(outcome_type AS TEXT),
+                CAST(outcome_confidence AS TEXT),
+                CAST(outcome_source AS TEXT),
+                CAST(sec_filename AS TEXT),
+                CAST(sec_form_type AS TEXT),
+                CAST(sec_company_name AS TEXT),
+                CAST(sec_ticker_source AS TEXT),
+                CAST(candidate_symbol_count AS BIGINT),
+                CAST(policy AS TEXT),
+                CAST(evidence AS TEXT),
+                CAST(notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
             "backtest_universe_membership",
             backtest_universe_membership_path,
             """
@@ -393,6 +472,7 @@ def build_duckdb(
         con.execute("CREATE INDEX IF NOT EXISTS idx_liquidity_date_symbol ON liquidity_metrics(date, symbol)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_security_events_symbol ON security_events(symbol, event_type)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_terminal_events_symbol ON terminal_events(symbol, event_date)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_delisting_outcomes_symbol ON delisting_outcomes(symbol, event_date)")
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_backtest_universe_date_name "
             "ON backtest_universe_membership(date, universe_name)"

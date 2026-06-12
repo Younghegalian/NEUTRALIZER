@@ -26,6 +26,7 @@ FONA keeps raw prices untouched and applies delisting policy in separate backtes
 
 - `security_events`: lifecycle events from price coverage, FMP metadata, and SEC Form 25/25-NSE filings.
 - `terminal_events`: last available close on or before selected delisting events; no artificial zero-price fill.
+- `delisting_outcomes`: selected SEC Form 25 document evidence, exit classification, effective date, observed exit price, and usable cash consideration where extractable.
 - `backtest_universe_membership`: `US_DAILY_LIFECYCLE_ADJUSTED_V2`, excluding dates after selected delisting events.
 
 Latest lifecycle build:
@@ -35,6 +36,13 @@ Latest lifecycle build:
 | Security lifecycle events | 13,635 |
 | Selected terminal delisting events | 1,778 |
 | Terminal events with price | 1,013 |
+| Delisting outcomes | 1,778 |
+| Delisting outcomes with observed exit price | 1,013 |
+| Delisting outcomes with exit value | 1,025 |
+| Selected SEC Form 25 docs parsed | 1,751 |
+| Outcomes with extracted cash consideration | 16 |
+| Outcomes with SEC effective date | 286 |
+| Unknown/not-enriched outcome classifications | 750 |
 | Zero terminal prices | 0 |
 | Lifecycle-adjusted universe memberships | 13,134,975 |
 | Base universe rows removed by lifecycle policy | 578,175 |
@@ -104,6 +112,7 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 - Ticker reuse can contaminate historical joins when metadata is weak.
 - SEC Form 25/25-NSE filing dates are proxies when no FMP `delistedDate` is available.
 - Terminal event prices are last available closes, not CRSP-style delisting returns.
+- `delisting_outcomes.exit_value` improves some cash-merger exits, but it is still not a complete CRSP-style delisting-return replacement. Mixed cash/stock deals, stock-for-stock mergers, and bankruptcies often need manual or premium-source enrichment.
 - Kaggle and FMP coverage depends on available plan/data limits.
 - Yahoo adjusted historical prices and vendor volume can still distort dollar-volume estimates for heavily split-adjusted securities.
 - Rows with extreme split-adjusted scale are flagged and excluded from universe construction, but raw rows remain in `daily_prices` for provenance and debugging.
@@ -117,6 +126,7 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 - `data/research/market_flow_audit.csv`
 - `data/research/security_events.parquet`
 - `data/research/terminal_events.parquet`
+- `data/research/delisting_outcomes.parquet`
 - `data/research/backtest_universe_membership.parquet`
 - `data/normalized/duplicate_report.parquet`
 - `data/normalized/bad_rows_report.parquet`

@@ -29,6 +29,7 @@ from src.normalize.build_security_master import build_security_master
 from src.normalize.normalize_prices import normalize_prices
 from src.tools.check_prereqs import check_prereqs
 from src.universe.build_backtest_universe import build_backtest_universe
+from src.universe.build_delisting_outcomes import build_delisting_outcomes
 from src.universe.build_universe import build_universe
 from src.universe.compute_liquidity import compute_liquidity
 from src.universe.universe_stats import build_universe_stats
@@ -50,6 +51,7 @@ FULL_PIPELINE_STEPS = [
     "liquidity",
     "universe",
     "backtest_universe",
+    "delisting_outcomes",
     "duckdb",
 ]
 
@@ -142,6 +144,11 @@ def run_step(args: argparse.Namespace, step: str) -> None:
         build_universe_stats()
     elif step == "backtest_universe":
         build_backtest_universe()
+    elif step == "delisting_outcomes":
+        build_delisting_outcomes(
+            fetch_sec_docs=not args.skip_delisting_outcome_doc_fetch,
+            sec_doc_limit=args.delisting_outcome_doc_limit,
+        )
     elif step == "duckdb":
         build_duckdb()
     elif step == "check":
@@ -166,6 +173,10 @@ def print_summary() -> None:
     backtest_universe = read_parquet_if_exists(
         config.BACKTEST_UNIVERSE_MEMBERSHIP_PATH,
         config.BACKTEST_UNIVERSE_COLUMNS,
+    )
+    delisting_outcomes = read_parquet_if_exists(
+        config.DELISTING_OUTCOMES_PATH,
+        config.DELISTING_OUTCOMES_COLUMNS,
     )
     universe_stats = read_parquet_if_exists(config.UNIVERSE_STATS_PATH, config.UNIVERSE_STATS_COLUMNS)
 
@@ -203,6 +214,7 @@ def print_summary() -> None:
     print(f"Median universe count: {median_universe_count_text}")
     print(f"Backtest universe name: {config.BACKTEST_UNIVERSE_NAME}")
     print(f"Backtest universe rows: {len(backtest_universe):,}")
+    print(f"Delisting outcomes: {len(delisting_outcomes):,}")
     print(f"DuckDB path: {config.DUCKDB_PATH}")
 
 
@@ -219,6 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
             "enrich_sec_delisting_documents",
             "collect_sec_form345",
             "build_sec_delisted_candidates",
+            "delisting_outcomes",
             "check",
         ],
         help="Run one pipeline step instead of the full pipeline.",
@@ -292,6 +305,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-sec-doc-enrich",
         action="store_true",
         help="Build SEC candidates without fetching individual Form 25 documents.",
+    )
+    parser.add_argument(
+        "--skip-delisting-outcome-doc-fetch",
+        action="store_true",
+        help="Build delisting outcomes from cached SEC outcome documents without fetching missing documents.",
+    )
+    parser.add_argument(
+        "--delisting-outcome-doc-limit",
+        type=int,
+        help="Optional cap for selected SEC Form 25 documents fetched during delisting outcome enrichment.",
     )
     return parser
 

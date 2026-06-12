@@ -87,6 +87,7 @@ foreach ($path in @($secIndex, $secForm345)) {
 & $Python -m src.run_pipeline --step liquidity
 & $Python -m src.run_pipeline --step universe
 & $Python -m src.run_pipeline --step backtest_universe
+& $Python -m src.run_pipeline --step delisting_outcomes
 & $Python -m src.run_pipeline --step duckdb
 & $Python -m src.tools.audit_daily_prices
 

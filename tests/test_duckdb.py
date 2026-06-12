@@ -24,6 +24,7 @@ class DuckDBTest(unittest.TestCase):
             stats_path = root / "universe_stats.parquet"
             security_events_path = root / "security_events.parquet"
             terminal_events_path = root / "terminal_events.parquet"
+            delisting_outcomes_path = root / "delisting_outcomes.parquet"
             backtest_membership_path = root / "backtest_universe_membership.parquet"
             price_quality_flags_path = root / "price_quality_flags.parquet"
             db_path = root / "pit_market.duckdb"
@@ -128,6 +129,10 @@ class DuckDBTest(unittest.TestCase):
                 terminal_events_path,
                 index=False,
             )
+            pd.DataFrame(columns=config.DELISTING_OUTCOMES_COLUMNS).to_parquet(
+                delisting_outcomes_path,
+                index=False,
+            )
             pd.DataFrame(columns=config.BACKTEST_UNIVERSE_COLUMNS).to_parquet(
                 backtest_membership_path,
                 index=False,
@@ -147,6 +152,7 @@ class DuckDBTest(unittest.TestCase):
                 universe_stats_path=stats_path,
                 security_events_path=security_events_path,
                 terminal_events_path=terminal_events_path,
+                delisting_outcomes_path=delisting_outcomes_path,
                 backtest_universe_membership_path=backtest_membership_path,
                 price_quality_flags_path=price_quality_flags_path,
             )

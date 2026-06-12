@@ -16,6 +16,7 @@ SEC delisting discovery
   -> price_quality_flags / liquidity_metrics
   -> universe_membership
   -> security_events / terminal_events
+  -> delisting_outcomes
   -> backtest_universe_membership
   -> universe_stats
   -> pit_market.duckdb
@@ -26,6 +27,7 @@ SEC delisting discovery
 | Collector | Output | Notes |
 | --- | --- | --- |
 | `sec_delisting_collector.py` | SEC staging parquet files | Form 25/25-NSE candidates plus Form 3/4/5 ticker map. |
+| `build_delisting_outcomes.py` | `data/staging/sec_delisting_outcome_documents.parquet`, `data/research/delisting_outcomes.parquet` | Selected SEC Form 25 document parsing for effective dates, exit classification, and cash consideration. |
 | `yahoo_delisted_probe` | `data/staging/yahoo_delisted_probe_daily_prices.parquet` | Recovered daily bars for SEC delisting candidates; accepts only USD `EQUITY` and `ETF` Yahoo metadata. |
 | `yahoo_fallback_downloader.py` | `data/staging/yahoo_fallback_daily_prices.parquet` | Active current-symbol daily bars. |
 | `kaggle_delisted_loader.py` | `data/staging/kaggle_delisted_daily_prices.parquet` | Arandkei archive loader. |
@@ -117,6 +119,7 @@ Outputs:
 
 - `security_events`: listing and delisting lifecycle events.
 - `terminal_events`: final exit reference price for each selected delisting event.
+- `delisting_outcomes`: enriched exit/outcome record for each selected delisting event.
 - `backtest_universe_membership`: base universe membership with dates after selected delisting events removed.
 
 Policy:
@@ -126,3 +129,5 @@ Policy:
 - SEC Form 25/25-NSE `date_filed` is used as a proxy only when a higher-confidence event is unavailable.
 - Delisting events are applied only to symbols with delisted-source price coverage to reduce ticker-reuse false positives.
 - Terminal price is the last available close on or before the selected event date.
+- `delisting_outcomes` parses the matched Form 25 document when available. It stores the extracted effective date, best-effort exit classification, observed exit price on or before the effective/event date, and SEC cash consideration per share when the text contains it.
+- SEC cash consideration becomes `exit_value` only when it appears to be full cash consideration, not a mixed cash/stock component, and it is on a comparable scale with observed prices when prices are available.
