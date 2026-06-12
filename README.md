@@ -1,15 +1,16 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/neutralizer-black.png">
-    <source media="(prefers-color-scheme: light)" srcset="assets/brand/neutralizer-white.png">
-    <img alt="NEUTRALIZER" src="assets/brand/neutralizer-white.png" width="720">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/fona-black.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/brand/fona-white.png">
+    <img alt="FONA" src="assets/brand/fona-white.png" width="720">
   </picture>
 </p>
 
-<h1 align="center">NEUTRALIZER</h1>
+<h1 align="center">FONA</h1>
 
 <p align="center">
-  <strong>Local-first PIT market data infrastructure for survivorship-reduced U.S. equity backtesting.</strong>
+  <strong>Finance Open Network Archive.</strong><br>
+  Local-first PIT market data infrastructure for survivorship-reduced U.S. equity backtesting.
 </p>
 
 <p align="center">
@@ -20,7 +21,7 @@
   <img alt="Tests" src="https://img.shields.io/badge/tests-11_passing-2EA043?style=flat-square">
 </p>
 
-NEUTRALIZER builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
+FONA, the Finance Open Network Archive, builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
 
 This repository contains the pipeline, tests, documentation, and brand assets. Generated market data, raw vendor/API responses, DuckDB files, and secrets stay local and are intentionally ignored by Git.
 
@@ -33,7 +34,7 @@ This repository contains the pipeline, tests, documentation, and brand assets. G
 | Security classification | `security_master` with stock/ETF/fund classification, exchange, name, sector, and industry fields |
 | Backtest universe | `universe_membership` rebuilt daily from price, volume, ADV20, and next-open eligibility |
 | Liquidity features | `liquidity_metrics` with dollar volume, ADV20, positive-volume traded days, and next open |
-| Quality gates | Unit tests plus a hard daily-bar audit for duplicates, nulls, OHLC validity, dates, and joins |
+| Quality gates | Unit tests, hard daily-bar audit, and annual listing/delisting flow audit |
 
 ## Data Product Snapshot
 
@@ -154,7 +155,7 @@ ORDER BY p.symbol;
 
 ## Source Model
 
-NEUTRALIZER uses SEC as the primary delisting discovery spine. SEC identifies delisting events and issuer CIKs; price collectors then recover the available OHLCV history for mapped tickers.
+FONA uses SEC as the primary delisting discovery spine. SEC identifies delisting events and issuer CIKs; price collectors then recover the available OHLCV history for mapped tickers.
 
 | Layer | Source | Role |
 | --- | --- | --- |
@@ -193,6 +194,21 @@ OK
 [audit] OK
 ```
 
+Annual market-flow validation:
+
+```powershell
+python -m src.tools.audit_market_flows --fetch-benchmarks --output data\research\market_flow_audit.csv
+```
+
+Latest `stock_major_universe` completed-year medians:
+
+| Metric | Value |
+| --- | ---: |
+| Public benchmark listing rate | 6.93% |
+| Public benchmark delisting rate | 7.16% |
+| Local SEC price-recovered delisting rate | 5.16% |
+| Local delisted-event capture vs benchmark | 71.68% |
+
 ## Quick Start
 
 Install dependencies:
@@ -222,14 +238,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
 Incrementally enrich sector and industry metadata when FMP quota allows:
 
 ```powershell
-$env:NEUTRALIZER_FMP_PROFILE_LIMIT="500"
+$env:FONA_FMP_PROFILE_LIMIT="500"
 powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
 ```
 
 ## Repository Layout
 
 ```text
-assets/brand/               NEUTRALIZER CI assets
+assets/brand/               FONA brand assets
 docs/                       Architecture, data dictionary, maintenance notes
 scripts/                    Operator scripts
 src/collectors/             Source collectors
@@ -250,7 +266,7 @@ data/                       Local-only generated data, ignored by Git
 
 ## Boundaries
 
-NEUTRALIZER is a research-grade local data product, not a CRSP, Norgate, Bloomberg, or Refinitiv replacement.
+FONA is a research-grade local data product, not a CRSP, Norgate, Bloomberg, or Refinitiv replacement.
 
 Known limitations:
 

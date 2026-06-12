@@ -174,7 +174,7 @@ def print_summary() -> None:
         median_universe_count_text = "n/a"
 
     print()
-    print("NEUTRALIZER market DB build complete.")
+    print("FONA market DB build complete.")
     print()
     print(f"Date range: {date_start} to {date_end}")
     print(f"Symbols total: {symbols_total:,}")
@@ -189,7 +189,7 @@ def print_summary() -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Build the NEUTRALIZER local market database.")
+    parser = argparse.ArgumentParser(description="Build the FONA local market database.")
     parser.add_argument("--start-date", default="2010-01-01", help="Inclusive start date, YYYY-MM-DD.")
     parser.add_argument("--end-date", default="today", help="Inclusive end date, YYYY-MM-DD or today.")
     parser.add_argument(

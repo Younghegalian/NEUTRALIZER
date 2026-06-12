@@ -1,9 +1,8 @@
 # Brand Assets
 
-This directory contains NEUTRALIZER CI assets.
+This directory contains FONA brand assets for the Finance Open Network Archive.
 
 | File | Use |
 | --- | --- |
-| `neutralizer-black.png` | Dark presentation background. |
-| `neutralizer-white.png` | Light presentation background. |
-
+| `fona-black.png` | Dark presentation background. |
+| `fona-white.png` | Light presentation background. |

@@ -1,6 +1,6 @@
 # Coverage Notes
 
-NEUTRALIZER is survivorship-reduced, not survivorship-bias-free.
+FONA is survivorship-reduced, not survivorship-bias-free.
 
 Coverage is split into two different questions:
 
@@ -19,6 +19,28 @@ Coverage is split into two different questions:
 | Yahoo cache rejected by instrument/currency/empty parse | 2,628 |
 | Final delisted-source symbols | 1,782 |
 | Delisted-source universe memberships | 975,928 |
+
+## Annual Flow Audit
+
+Annual listing and delisting fit is measured with:
+
+```powershell
+python -m src.tools.audit_market_flows --fetch-benchmarks --output data\research\market_flow_audit.csv
+```
+
+Latest `stock_major_universe` completed-year medians:
+
+| Metric | Value |
+| --- | ---: |
+| Public benchmark listing rate | 6.93% |
+| Public benchmark delisting rate | 7.16% |
+| Local SEC price-recovered delisting rate | 5.16% |
+| Local delisted-event capture vs benchmark | 71.68% |
+| Local universe entry rate | 9.72% |
+| Local universe exit rate | 0.60% |
+| Local delisted-source universe exit rate | 0.38% |
+
+Interpretation: SEC-led price recovery captures a meaningful share of annual delisting events, but local universe exits are still too low to claim CRSP-grade survivorship-bias-free coverage. Treat the database as survivorship-reduced unless a paid lifecycle identifier source such as CRSP, Norgate, Sharadar, Refinitiv, or Polygon delisted history is added.
 
 ## Latest Classification Coverage
 
@@ -57,5 +79,6 @@ Coverage is split into two different questions:
 
 - `data/research/yahoo_delisted_probe_coverage.parquet`
 - `data/research/yahoo_delisted_probe_metadata_audit.parquet`
+- `data/research/market_flow_audit.csv`
 - `data/normalized/duplicate_report.parquet`
 - `data/normalized/bad_rows_report.parquet`

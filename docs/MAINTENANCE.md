@@ -12,15 +12,21 @@ Daily maintenance is designed for a local machine that already has the required 
 On Windows, if `python` resolves to the Microsoft Store alias, set an explicit runtime before running manual commands:
 
 ```powershell
-$env:NEUTRALIZER_PYTHON="C:\Path\To\python.exe"
+$env:FONA_PYTHON="C:\Path\To\python.exe"
 ```
 
-The daily maintenance script uses `NEUTRALIZER_PYTHON` when set and otherwise tries a local `.venv`, normal PATH Python, and the Codex bundled Python runtime.
+The daily maintenance script uses `FONA_PYTHON` when set and otherwise tries a local `.venv`, normal PATH Python, and the Codex bundled Python runtime.
 
 Sector and industry enrichment is incremental because FMP API limits apply. Set this before maintenance to allow new profile requests:
 
 ```powershell
-$env:NEUTRALIZER_FMP_PROFILE_LIMIT="200"
+$env:FONA_FMP_PROFILE_LIMIT="200"
+```
+
+Public listing/delisting benchmark checks are optional because they call external websites. Enable them when you want the daily run to compare local annual flows with StockAnalysis listed/delisted counts and World Bank listed-company counts:
+
+```powershell
+$env:FONA_FETCH_MARKET_FLOW_BENCHMARKS="1"
 ```
 
 ## Standard Daily Run
@@ -38,12 +44,13 @@ The script:
 5. Probes Yahoo for newly recoverable delisted candidates.
 6. Loads Kaggle delisted data if present.
 7. Rebuilds normalized price and symbol parquet.
-8. Refreshes cached FMP profile metadata up to `NEUTRALIZER_FMP_PROFILE_LIMIT`.
+8. Refreshes cached FMP profile metadata up to `FONA_FMP_PROFILE_LIMIT`.
 9. Rebuilds `security_master`.
 10. Recomputes liquidity metrics and universe tables.
 11. Rebuilds `data/pit_market.duckdb`.
 12. Audits daily-bar grain, nulls, OHLC validity, date validity, and table integrity.
-13. Runs unit tests.
+13. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
+14. Runs unit tests.
 
 ## Faster Manual Runs
 
@@ -81,3 +88,16 @@ Audit the current DuckDB daily bars:
 ```powershell
 python -m src.tools.audit_daily_prices
 ```
+
+Audit annual listing and delisting flow rates:
+
+```powershell
+python -m src.tools.audit_market_flows --fetch-benchmarks --output data\research\market_flow_audit.csv
+```
+
+The flow audit reports three scopes: all universe members, stock-only members, and stock-only major-exchange members excluding OTC exchanges. Use `stock_major_universe` as the closest public-market comparison scope. The audit separates price/universe behavior from event coverage:
+
+- `new_to_universe` and `db_listing_rate_pct` measure symbols newly entering the local tradable universe.
+- `left_universe_completed` measures symbols that disappear from the local universe in completed years.
+- `sec_candidate_price_recovered_delisted_symbols` measures SEC Form 25/25-NSE candidate symbols whose daily prices were recovered.
+- `benchmark_new_listed`, `benchmark_delisted`, and benchmark rates are public comparison counts, fetched live when possible and backed by checked fallback values.

@@ -15,12 +15,13 @@ function Test-PythonCandidate {
     }
 }
 
-function Resolve-NeutralizerPython {
-    if ($env:NEUTRALIZER_PYTHON) {
-        if (Test-PythonCandidate -Candidate $env:NEUTRALIZER_PYTHON) {
-            return $env:NEUTRALIZER_PYTHON
+function Resolve-FonaPython {
+    $pythonOverride = if ($env:FONA_PYTHON) { $env:FONA_PYTHON } else { $null }
+    if ($pythonOverride) {
+        if (Test-PythonCandidate -Candidate $pythonOverride) {
+            return $pythonOverride
         }
-        throw "NEUTRALIZER_PYTHON is set but is not a usable Python 3.10+ executable: $env:NEUTRALIZER_PYTHON"
+        throw "FONA_PYTHON is set but is not a usable Python 3.10+ executable: $pythonOverride"
     }
 
     $candidates = @()
@@ -40,17 +41,17 @@ function Resolve-NeutralizerPython {
         }
     }
 
-    throw "No usable Python 3.10+ executable found. Set NEUTRALIZER_PYTHON to your Python path."
+    throw "No usable Python 3.10+ executable found. Set FONA_PYTHON to your Python path."
 }
 
-$Python = Resolve-NeutralizerPython
-$StartDate = if ($env:NEUTRALIZER_START_DATE) { $env:NEUTRALIZER_START_DATE } else { "2010-01-01" }
-$YahooWorkers = if ($env:NEUTRALIZER_YAHOO_WORKERS) { $env:NEUTRALIZER_YAHOO_WORKERS } else { "6" }
-$FmpProfileLimit = if ($env:NEUTRALIZER_FMP_PROFILE_LIMIT) { $env:NEUTRALIZER_FMP_PROFILE_LIMIT } else { "0" }
+$Python = Resolve-FonaPython
+$StartDate = if ($env:FONA_START_DATE) { $env:FONA_START_DATE } else { "2010-01-01" }
+$YahooWorkers = if ($env:FONA_YAHOO_WORKERS) { $env:FONA_YAHOO_WORKERS } else { "6" }
+$FmpProfileLimit = if ($env:FONA_FMP_PROFILE_LIMIT) { $env:FONA_FMP_PROFILE_LIMIT } else { "0" }
 $Year = (Get-Date).Year
 $Quarter = [Math]::Floor(((Get-Date).Month - 1) / 3) + 1
 
-Write-Host "NEUTRALIZER daily maintenance"
+Write-Host "FONA daily maintenance"
 Write-Host "Project: $ProjectRoot"
 Write-Host "Python: $Python"
 Write-Host "Date range: $StartDate to today"
@@ -78,6 +79,13 @@ foreach ($path in @($secIndex, $secForm345)) {
 & $Python -m src.run_pipeline --step universe
 & $Python -m src.run_pipeline --step duckdb
 & $Python -m src.tools.audit_daily_prices
+
+$MarketFlowArgs = @("--output", "data\research\market_flow_audit.csv")
+if ($env:FONA_FETCH_MARKET_FLOW_BENCHMARKS -eq "1") {
+    $MarketFlowArgs += "--fetch-benchmarks"
+}
+& $Python -m src.tools.audit_market_flows @MarketFlowArgs
+
 & $Python -m unittest discover -s tests
 
-Write-Host "NEUTRALIZER daily maintenance complete."
+Write-Host "FONA daily maintenance complete."

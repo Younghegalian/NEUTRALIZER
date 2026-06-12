@@ -1,6 +1,6 @@
 # Architecture
 
-NEUTRALIZER builds a local daily-bar research database in deterministic stages.
+FONA builds a local daily-bar research database in deterministic stages.
 
 The delisting universe is SEC-led. SEC filings identify delisting events and issuer CIKs, SEC Form 3/4/5 data helps map those issuers back to tickers, and then price-bar collectors recover whatever OHLCV history is available for those tickers.
 
