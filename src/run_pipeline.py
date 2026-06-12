@@ -30,7 +30,9 @@ from src.normalize.build_symbol_aliases import build_symbol_aliases
 from src.normalize.normalize_prices import normalize_prices
 from src.tools.check_prereqs import check_prereqs
 from src.universe.build_backtest_universe import build_backtest_universe
+from src.universe.build_corporate_action_evidence import build_corporate_action_evidence
 from src.universe.build_delisting_outcomes import build_delisting_outcomes
+from src.universe.build_return_quality_flags import build_return_quality_flags
 from src.universe.build_terminal_event_validity import build_terminal_event_validity
 from src.universe.build_universe import build_universe
 from src.universe.compute_liquidity import compute_liquidity
@@ -50,6 +52,7 @@ FULL_PIPELINE_STEPS = [
     "fmp_profiles",
     "sec_company_metadata",
     "security_master",
+    "corporate_action_evidence",
     "liquidity",
     "universe",
     "backtest_universe",
@@ -141,6 +144,10 @@ def run_step(args: argparse.Namespace, step: str) -> None:
         normalize_prices(start_date=start_date, end_date=end_date)
     elif step == "security_master":
         build_security_master()
+    elif step == "corporate_action_evidence":
+        build_corporate_action_evidence()
+    elif step == "return_quality_flags":
+        build_return_quality_flags()
     elif step == "liquidity":
         compute_liquidity()
     elif step == "universe":
@@ -191,6 +198,14 @@ def print_summary() -> None:
         config.VALID_TERMINAL_EVENTS_COLUMNS,
     )
     symbol_aliases = read_parquet_if_exists(config.SYMBOL_ALIASES_PATH, config.SYMBOL_ALIAS_COLUMNS)
+    corporate_action_evidence = read_parquet_if_exists(
+        config.CORPORATE_ACTION_EVIDENCE_PATH,
+        config.CORPORATE_ACTION_EVIDENCE_COLUMNS,
+    )
+    return_quality_flags = read_parquet_if_exists(
+        config.RETURN_QUALITY_FLAGS_PATH,
+        config.RETURN_QUALITY_FLAG_COLUMNS,
+    )
     universe_stats = read_parquet_if_exists(config.UNIVERSE_STATS_PATH, config.UNIVERSE_STATS_COLUMNS)
 
     date_start, date_end = _safe_min_max(daily_prices["date"]) if "date" in daily_prices else ("n/a", "n/a")
@@ -230,6 +245,8 @@ def print_summary() -> None:
     print(f"Delisting outcomes: {len(delisting_outcomes):,}")
     print(f"Valid terminal events: {len(valid_terminal_events):,}")
     print(f"Symbol aliases: {len(symbol_aliases):,}")
+    print(f"Corporate action evidence rows: {len(corporate_action_evidence):,}")
+    print(f"Return quality flags: {len(return_quality_flags):,}")
     print(f"DuckDB path: {config.DUCKDB_PATH}")
 
 
@@ -249,6 +266,8 @@ def build_parser() -> argparse.ArgumentParser:
             "delisting_outcomes",
             "terminal_event_validity",
             "symbol_aliases",
+            "corporate_action_evidence",
+            "return_quality_flags",
             "check",
         ],
         help="Run one pipeline step instead of the full pipeline.",

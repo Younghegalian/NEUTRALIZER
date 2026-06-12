@@ -170,6 +170,60 @@ def get_symbol_aliases(
         con.close()
 
 
+def get_corporate_action_evidence(
+    symbols: list[str] | None = None,
+    db_path: Path = config.DUCKDB_PATH,
+) -> pd.DataFrame:
+    con = _connect(db_path)
+    try:
+        if not symbols:
+            return con.execute(
+                "SELECT * FROM corporate_action_evidence ORDER BY event_date, symbol, event_type"
+            ).fetchdf()
+        placeholders = ",".join(["?"] * len(symbols))
+        return con.execute(
+            f"""
+            SELECT *
+            FROM corporate_action_evidence
+            WHERE symbol IN ({placeholders})
+            ORDER BY event_date, symbol, event_type
+            """,
+            symbols,
+        ).fetchdf()
+    finally:
+        con.close()
+
+
+def get_return_quality_flags(
+    symbols: list[str] | None = None,
+    only_exclusions: bool = False,
+    db_path: Path = config.DUCKDB_PATH,
+) -> pd.DataFrame:
+    con = _connect(db_path)
+    try:
+        predicates = []
+        params: list[object] = []
+        if symbols:
+            placeholders = ",".join(["?"] * len(symbols))
+            predicates.append(f"symbol IN ({placeholders})")
+            params.extend(symbols)
+        if only_exclusions:
+            predicates.append("exclude_from_backtest_return")
+
+        where_sql = f"WHERE {' AND '.join(predicates)}" if predicates else ""
+        return con.execute(
+            f"""
+            SELECT *
+            FROM return_quality_flags
+            {where_sql}
+            ORDER BY date, symbol
+            """,
+            params,
+        ).fetchdf()
+    finally:
+        con.close()
+
+
 def get_price_panel(
     start_date: str,
     end_date: str,

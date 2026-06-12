@@ -84,6 +84,7 @@ foreach ($path in @($secIndex, $secForm345)) {
 & $Python -m src.run_pipeline --step fmp_profiles --fmp-profile-limit $FmpProfileLimit
 & $Python -m src.run_pipeline --step sec_company_metadata @SecCompanyArgs
 & $Python -m src.run_pipeline --step security_master
+& $Python -m src.run_pipeline --step corporate_action_evidence
 & $Python -m src.run_pipeline --step liquidity
 & $Python -m src.run_pipeline --step universe
 & $Python -m src.run_pipeline --step backtest_universe

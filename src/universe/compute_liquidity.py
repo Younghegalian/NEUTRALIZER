@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from src import config
+from src.universe.build_return_quality_flags import build_return_quality_flags_df
 from src.utils import empty_frame, write_parquet
 
 
@@ -52,7 +53,11 @@ def build_price_quality_flags_df(daily_prices: pd.DataFrame) -> pd.DataFrame:
     return _price_quality_reason_frame(work)
 
 
-def compute_liquidity_metrics_df(daily_prices: pd.DataFrame) -> pd.DataFrame:
+def compute_liquidity_metrics_df(
+    daily_prices: pd.DataFrame,
+    price_quality_flags: pd.DataFrame | None = None,
+    return_quality_flags: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     if daily_prices.empty:
         return empty_frame(config.LIQUIDITY_COLUMNS)
 
@@ -60,11 +65,26 @@ def compute_liquidity_metrics_df(daily_prices: pd.DataFrame) -> pd.DataFrame:
     work["date"] = pd.to_datetime(work["date"], errors="coerce")
     for column in ["open", "high", "low", "close", "volume", "adjusted_close"]:
         work[column] = pd.to_numeric(work[column], errors="coerce")
-    flags = build_price_quality_flags_df(work)
-    if flags.empty:
-        flagged_keys = pd.MultiIndex.from_arrays([[], []], names=["date", "symbol"])
+    flags = price_quality_flags if price_quality_flags is not None else build_price_quality_flags_df(work)
+    return_flags = (
+        return_quality_flags
+        if return_quality_flags is not None
+        else build_return_quality_flags_df(work)
+    )
+
+    flagged_frames = []
+    if not flags.empty:
+        flagged_frames.append(flags[["date", "symbol"]])
+    if not return_flags.empty and "exclude_from_backtest_return" in return_flags.columns:
+        return_exclusions = return_flags[return_flags["exclude_from_backtest_return"].fillna(False)]
+        if not return_exclusions.empty:
+            flagged_frames.append(return_exclusions[["date", "symbol"]])
+    if flagged_frames:
+        flagged_keys = pd.MultiIndex.from_frame(
+            pd.concat(flagged_frames, ignore_index=True).drop_duplicates()
+        )
     else:
-        flagged_keys = pd.MultiIndex.from_frame(flags[["date", "symbol"]])
+        flagged_keys = pd.MultiIndex.from_arrays([[], []], names=["date", "symbol"])
 
     work = work.sort_values(["symbol", "date"]).reset_index(drop=True)
     row_keys = pd.MultiIndex.from_frame(work[["date", "symbol"]])
@@ -129,14 +149,22 @@ def compute_liquidity(
     daily_prices_path: Path = config.DAILY_PRICES_PATH,
     output_path: Path = config.LIQUIDITY_METRICS_PATH,
     price_quality_flags_path: Path = config.PRICE_QUALITY_FLAGS_PATH,
+    return_quality_flags_path: Path = config.RETURN_QUALITY_FLAGS_PATH,
 ) -> pd.DataFrame:
     daily_prices = pd.read_parquet(daily_prices_path) if daily_prices_path.exists() else empty_frame(config.CANONICAL_PRICE_COLUMNS)
-    result = compute_liquidity_metrics_df(daily_prices)
     quality_flags = build_price_quality_flags_df(daily_prices)
+    return_quality_flags = build_return_quality_flags_df(daily_prices)
+    result = compute_liquidity_metrics_df(
+        daily_prices,
+        price_quality_flags=quality_flags,
+        return_quality_flags=return_quality_flags,
+    )
     write_parquet(result, output_path)
     write_parquet(quality_flags, price_quality_flags_path)
+    write_parquet(return_quality_flags, return_quality_flags_path)
     print(f"[liquidity] Wrote {len(result):,} rows to {output_path}")
     print(f"[liquidity] Wrote {len(quality_flags):,} price quality flags to {price_quality_flags_path}")
+    print(f"[liquidity] Wrote {len(return_quality_flags):,} return quality flags to {return_quality_flags_path}")
     return result
 
 

@@ -9,7 +9,7 @@ import pandas as pd
 
 from src import config
 from src.db.build_duckdb import build_duckdb
-from src.db.query_examples import get_prices, get_universe
+from src.db.query_examples import get_corporate_action_evidence, get_prices, get_return_quality_flags, get_universe
 
 
 class DuckDBTest(unittest.TestCase):
@@ -28,6 +28,8 @@ class DuckDBTest(unittest.TestCase):
             terminal_event_validity_path = root / "terminal_event_validity.parquet"
             valid_terminal_events_path = root / "valid_terminal_events.parquet"
             symbol_aliases_path = root / "symbol_aliases.parquet"
+            corporate_action_evidence_path = root / "corporate_action_evidence.parquet"
+            return_quality_flags_path = root / "return_quality_flags.parquet"
             backtest_membership_path = root / "backtest_universe_membership.parquet"
             price_quality_flags_path = root / "price_quality_flags.parquet"
             db_path = root / "pit_market.duckdb"
@@ -148,6 +150,50 @@ class DuckDBTest(unittest.TestCase):
                 symbol_aliases_path,
                 index=False,
             )
+            pd.DataFrame(
+                [
+                    {
+                        "symbol": "GOOD",
+                        "event_date": date(2020, 1, 2),
+                        "event_type": "news_spike",
+                        "action_ratio": None,
+                        "reference_price": None,
+                        "source_name": "test source",
+                        "source_url": "https://example.com/source",
+                        "source_authority": "test",
+                        "confidence": "medium",
+                        "notes": "test",
+                    }
+                ],
+                columns=config.CORPORATE_ACTION_EVIDENCE_COLUMNS,
+            ).to_parquet(corporate_action_evidence_path, index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "date": date(2020, 1, 2),
+                        "symbol": "GOOD",
+                        "source": "stooq",
+                        "prev_date": date(2020, 1, 1),
+                        "prev_close": 1.0,
+                        "close": 10.5,
+                        "raw_return": 9.5,
+                        "prev_adjusted_close": None,
+                        "adjusted_close": None,
+                        "adjusted_return": None,
+                        "prev_volume": 1000,
+                        "volume": 200_000,
+                        "flag_reason": "test",
+                        "severity": "event_risk",
+                        "event_type": "news_spike",
+                        "evidence_event_date": date(2020, 1, 2),
+                        "evidence_source_name": "test source",
+                        "evidence_url": "https://example.com/source",
+                        "exclude_from_backtest_return": False,
+                        "notes": "test",
+                    }
+                ],
+                columns=config.RETURN_QUALITY_FLAG_COLUMNS,
+            ).to_parquet(return_quality_flags_path, index=False)
             pd.DataFrame(columns=config.BACKTEST_UNIVERSE_COLUMNS).to_parquet(
                 backtest_membership_path,
                 index=False,
@@ -171,6 +217,8 @@ class DuckDBTest(unittest.TestCase):
                 terminal_event_validity_path=terminal_event_validity_path,
                 valid_terminal_events_path=valid_terminal_events_path,
                 symbol_aliases_path=symbol_aliases_path,
+                corporate_action_evidence_path=corporate_action_evidence_path,
+                return_quality_flags_path=return_quality_flags_path,
                 backtest_universe_membership_path=backtest_membership_path,
                 price_quality_flags_path=price_quality_flags_path,
             )
@@ -179,6 +227,8 @@ class DuckDBTest(unittest.TestCase):
             prices = get_prices("2020-01-02", ["GOOD"], db_path=db_path)
             self.assertEqual(len(prices), 1)
             self.assertEqual(prices.iloc[0]["symbol"], "GOOD")
+            self.assertEqual(len(get_corporate_action_evidence(["GOOD"], db_path=db_path)), 1)
+            self.assertEqual(len(get_return_quality_flags(["GOOD"], db_path=db_path)), 1)
 
 
 if __name__ == "__main__":

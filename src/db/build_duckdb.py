@@ -31,6 +31,8 @@ def build_duckdb(
     terminal_event_validity_path: Path = config.TERMINAL_EVENT_VALIDITY_PATH,
     valid_terminal_events_path: Path = config.VALID_TERMINAL_EVENTS_PATH,
     symbol_aliases_path: Path = config.SYMBOL_ALIASES_PATH,
+    corporate_action_evidence_path: Path = config.CORPORATE_ACTION_EVIDENCE_PATH,
+    return_quality_flags_path: Path = config.RETURN_QUALITY_FLAGS_PATH,
     backtest_universe_membership_path: Path = config.BACKTEST_UNIVERSE_MEMBERSHIP_PATH,
     price_quality_flags_path: Path = config.PRICE_QUALITY_FLAGS_PATH,
 ) -> Path:
@@ -52,6 +54,8 @@ def build_duckdb(
             "terminal_event_validity",
             "valid_terminal_events",
             "symbol_aliases",
+            "corporate_action_evidence",
+            "return_quality_flags",
             "backtest_universe_membership",
             "price_quality_flags",
         ]:
@@ -275,6 +279,48 @@ def build_duckdb(
                 end_date DATE,
                 action_type TEXT,
                 source TEXT,
+                notes TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE corporate_action_evidence (
+                symbol TEXT,
+                event_date DATE,
+                event_type TEXT,
+                action_ratio DOUBLE,
+                reference_price DOUBLE,
+                source_name TEXT,
+                source_url TEXT,
+                source_authority TEXT,
+                confidence TEXT,
+                notes TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE return_quality_flags (
+                date DATE,
+                symbol TEXT,
+                source TEXT,
+                prev_date DATE,
+                prev_close DOUBLE,
+                close DOUBLE,
+                raw_return DOUBLE,
+                prev_adjusted_close DOUBLE,
+                adjusted_close DOUBLE,
+                adjusted_return DOUBLE,
+                prev_volume BIGINT,
+                volume BIGINT,
+                flag_reason TEXT,
+                severity TEXT,
+                event_type TEXT,
+                evidence_event_date DATE,
+                evidence_source_name TEXT,
+                evidence_url TEXT,
+                exclude_from_backtest_return BOOLEAN,
                 notes TEXT
             )
             """
@@ -567,6 +613,54 @@ def build_duckdb(
         )
         _insert_from_parquet(
             con,
+            "corporate_action_evidence",
+            corporate_action_evidence_path,
+            """
+            SELECT
+                CAST(symbol AS TEXT),
+                CAST(event_date AS DATE),
+                CAST(event_type AS TEXT),
+                CAST(action_ratio AS DOUBLE),
+                CAST(reference_price AS DOUBLE),
+                CAST(source_name AS TEXT),
+                CAST(source_url AS TEXT),
+                CAST(source_authority AS TEXT),
+                CAST(confidence AS TEXT),
+                CAST(notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
+            "return_quality_flags",
+            return_quality_flags_path,
+            """
+            SELECT
+                CAST(date AS DATE),
+                CAST(symbol AS TEXT),
+                CAST(source AS TEXT),
+                CAST(prev_date AS DATE),
+                CAST(prev_close AS DOUBLE),
+                CAST(close AS DOUBLE),
+                CAST(raw_return AS DOUBLE),
+                CAST(prev_adjusted_close AS DOUBLE),
+                CAST(adjusted_close AS DOUBLE),
+                CAST(adjusted_return AS DOUBLE),
+                CAST(prev_volume AS BIGINT),
+                CAST(volume AS BIGINT),
+                CAST(flag_reason AS TEXT),
+                CAST(severity AS TEXT),
+                CAST(event_type AS TEXT),
+                CAST(evidence_event_date AS DATE),
+                CAST(evidence_source_name AS TEXT),
+                CAST(evidence_url AS TEXT),
+                CAST(exclude_from_backtest_return AS BOOLEAN),
+                CAST(notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
             "backtest_universe_membership",
             backtest_universe_membership_path,
             """
@@ -617,6 +711,14 @@ def build_duckdb(
             "ON valid_terminal_events(symbol, event_date)"
         )
         con.execute("CREATE INDEX IF NOT EXISTS idx_symbol_aliases_alias ON symbol_aliases(alias_symbol, start_date)")
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_corporate_action_evidence_symbol "
+            "ON corporate_action_evidence(symbol, event_date)"
+        )
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_return_quality_flags_symbol "
+            "ON return_quality_flags(symbol, date)"
+        )
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_backtest_universe_date_name "
             "ON backtest_universe_membership(date, universe_name)"

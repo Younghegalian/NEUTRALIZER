@@ -72,7 +72,30 @@ integrity_checks AS (
             WHERE l.has_next_open AND c.next_date IS NOT NULL AND p.symbol IS NULL
         ) AS universe_global_next_open_mismatch,
         (SELECT COUNT(*) FROM universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS universe_price_quality_suspect,
-        (SELECT COUNT(*) FROM backtest_universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS backtest_universe_price_quality_suspect
+        (SELECT COUNT(*) FROM backtest_universe_membership u JOIN liquidity_metrics l USING(date, symbol) WHERE l.is_price_quality_suspect) AS backtest_universe_price_quality_suspect,
+        (
+            SELECT COUNT(*)
+            FROM universe_membership u
+            JOIN return_quality_flags r USING(date, symbol)
+            WHERE r.exclude_from_backtest_return
+        ) AS universe_return_quality_exclusions,
+        (
+            SELECT COUNT(*)
+            FROM backtest_universe_membership u
+            JOIN return_quality_flags r USING(date, symbol)
+            WHERE r.exclude_from_backtest_return
+        ) AS backtest_universe_return_quality_exclusions,
+        (
+            SELECT COUNT(*)
+            FROM return_quality_flags r
+            LEFT JOIN daily_prices p USING(date, symbol)
+            WHERE p.symbol IS NULL
+        ) AS return_quality_flags_without_price,
+        (
+            SELECT COUNT(*)
+            FROM corporate_action_evidence
+            WHERE source_url IS NULL OR TRIM(source_url) = ''
+        ) AS corporate_action_evidence_missing_url
 )
 SELECT 'duplicate_keys' AS check_name, COUNT(*)::DOUBLE AS value FROM duplicate_keys
 UNION ALL SELECT 'duplicate_affected_rows', COALESCE(SUM(row_count), 0)::DOUBLE FROM duplicate_keys
@@ -103,6 +126,10 @@ UNION ALL SELECT 'invalid_rows_in_valid_terminal_events', invalid_rows_in_valid_
 UNION ALL SELECT 'universe_global_next_open_mismatch', universe_global_next_open_mismatch FROM integrity_checks
 UNION ALL SELECT 'universe_price_quality_suspect', universe_price_quality_suspect FROM integrity_checks
 UNION ALL SELECT 'backtest_universe_price_quality_suspect', backtest_universe_price_quality_suspect FROM integrity_checks
+UNION ALL SELECT 'universe_return_quality_exclusions', universe_return_quality_exclusions FROM integrity_checks
+UNION ALL SELECT 'backtest_universe_return_quality_exclusions', backtest_universe_return_quality_exclusions FROM integrity_checks
+UNION ALL SELECT 'return_quality_flags_without_price', return_quality_flags_without_price FROM integrity_checks
+UNION ALL SELECT 'corporate_action_evidence_missing_url', corporate_action_evidence_missing_url FROM integrity_checks
 ORDER BY check_name
 """
 
@@ -145,6 +172,29 @@ FROM price_quality_flags
 """
 
 
+RETURN_QUALITY_SQL = """
+SELECT
+    COUNT(*) AS flagged_rows,
+    COUNT(DISTINCT symbol) AS flagged_symbols,
+    COUNT(*) FILTER (WHERE exclude_from_backtest_return) AS exclusion_rows,
+    COUNT(*) FILTER (WHERE severity = 'event_risk') AS event_risk_rows,
+    COUNT(*) FILTER (WHERE event_type = 'reverse_split') AS reverse_split_evidence_rows,
+    COUNT(*) FILTER (WHERE evidence_url IS NOT NULL AND evidence_url <> '') AS sourced_rows
+FROM return_quality_flags
+"""
+
+
+CORPORATE_ACTION_EVIDENCE_SQL = """
+SELECT
+    COUNT(*) AS evidence_rows,
+    COUNT(DISTINCT symbol) AS evidence_symbols,
+    COUNT(*) FILTER (WHERE event_type = 'reverse_split') AS reverse_split_rows,
+    COUNT(*) FILTER (WHERE source_authority = 'sec') AS sec_rows,
+    COUNT(*) FILTER (WHERE source_authority = 'nasdaq_trader') AS nasdaq_trader_rows
+FROM corporate_action_evidence
+"""
+
+
 DELISTING_OUTCOME_SQL = """
 SELECT
     COUNT(*) AS outcomes,
@@ -176,6 +226,8 @@ def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
         profile = con.execute(PROFILE_SQL).fetchdf()
         sources = con.execute(SOURCE_SQL).fetchdf()
         quality = con.execute(QUALITY_SQL).fetchdf()
+        return_quality = con.execute(RETURN_QUALITY_SQL).fetchdf()
+        corporate_action_evidence = con.execute(CORPORATE_ACTION_EVIDENCE_SQL).fetchdf()
         delisting_outcomes = con.execute(DELISTING_OUTCOME_SQL).fetchdf()
         terminal_validity = con.execute(TERMINAL_VALIDITY_SQL).fetchdf()
         hard_checks = con.execute(HARD_CHECK_SQL).fetchdf()
@@ -188,6 +240,12 @@ def audit_daily_prices(db_path: Path = config.DUCKDB_PATH) -> int:
     print()
     print("[audit] price quality flags")
     print(quality.to_string(index=False))
+    print()
+    print("[audit] return quality flags")
+    print(return_quality.to_string(index=False))
+    print()
+    print("[audit] corporate action evidence")
+    print(corporate_action_evidence.to_string(index=False))
     print()
     print("[audit] delisting outcomes")
     print(delisting_outcomes.to_string(index=False))
