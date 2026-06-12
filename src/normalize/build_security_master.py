@@ -168,6 +168,37 @@ def _read_fmp_profile_metadata() -> pd.DataFrame:
     return fmp[columns].drop_duplicates("symbol")
 
 
+def _read_sec_company_metadata() -> pd.DataFrame:
+    sec = read_parquet_if_exists(config.SEC_COMPANY_METADATA_PATH, ["symbol"])
+    if sec.empty:
+        return pd.DataFrame(
+            columns=[
+                "symbol",
+                "sec_cik",
+                "sec_company_name",
+                "sec_exchange",
+                "sic",
+                "sic_description",
+                "sic_sector",
+            ]
+        )
+    sec["symbol"] = sec["symbol"].map(normalize_symbol)
+    sec = sec.rename(columns={"cik": "sec_cik"})
+    columns = [
+        "symbol",
+        "sec_cik",
+        "sec_company_name",
+        "sec_exchange",
+        "sic",
+        "sic_description",
+        "sic_sector",
+    ]
+    for column in columns:
+        if column not in sec.columns:
+            sec[column] = pd.NA
+    return sec[columns].drop_duplicates("symbol")
+
+
 def _first_notna(*values: object) -> object:
     for value in values:
         if value is not None and not pd.isna(value):
@@ -190,16 +221,56 @@ def build_security_master_df(symbol_master: pd.DataFrame) -> pd.DataFrame:
         _read_yahoo_metadata(),
         _read_fmp_delisted_metadata(),
         _read_fmp_profile_metadata(),
+        _read_sec_company_metadata(),
     ]:
         if not frame.empty:
             result = result.merge(frame, on="symbol", how="left")
 
+    optional_columns = [
+        "active_security_name",
+        "active_exchange",
+        "active_is_etf",
+        "yahoo_instrument_type",
+        "yahoo_security_name",
+        "yahoo_exchange",
+        "yahoo_currency",
+        "fmp_delisted_name",
+        "fmp_delisted_exchange",
+        "fmp_profile_name",
+        "fmp_profile_exchange",
+        "fmp_profile_currency",
+        "fmp_is_etf",
+        "fmp_is_fund",
+        "sec_company_name",
+        "sec_exchange",
+        "sec_cik",
+        "sic",
+        "sic_description",
+        "sic_sector",
+        "sector",
+        "industry",
+    ]
+    for column in optional_columns:
+        if column not in result.columns:
+            result[column] = pd.NA
+
+    result["fmp_sector"] = result["sector"] if "sector" in result.columns else pd.NA
+    result["fmp_industry"] = result["industry"] if "industry" in result.columns else pd.NA
+    result["sector"] = result.apply(
+        lambda row: _first_notna(row.get("fmp_sector"), row.get("sic_sector")),
+        axis=1,
+    )
+    result["industry"] = result.apply(
+        lambda row: _first_notna(row.get("fmp_industry"), row.get("sic_description")),
+        axis=1,
+    )
     result["security_name"] = result.apply(
         lambda row: _first_notna(
             row.get("fmp_profile_name"),
             row.get("yahoo_security_name"),
             row.get("active_security_name"),
             row.get("fmp_delisted_name"),
+            row.get("sec_company_name"),
         ),
         axis=1,
     )
@@ -209,9 +280,11 @@ def build_security_master_df(symbol_master: pd.DataFrame) -> pd.DataFrame:
             row.get("yahoo_exchange"),
             row.get("active_exchange"),
             row.get("fmp_delisted_exchange"),
+            row.get("sec_exchange"),
         ),
         axis=1,
     )
+    result["cik"] = result.get("sec_cik")
     result["currency"] = result.apply(
         lambda row: _first_notna(row.get("fmp_profile_currency"), row.get("yahoo_currency")),
         axis=1,
@@ -245,7 +318,11 @@ def build_security_master_df(symbol_master: pd.DataFrame) -> pd.DataFrame:
         axis=1,
     )
     result["sector_source"] = result.apply(
-        lambda row: "fmp_profile" if not pd.isna(row.get("sector")) or not pd.isna(row.get("industry")) else pd.NA,
+        lambda row: "fmp_profile"
+        if not pd.isna(row.get("fmp_sector")) or not pd.isna(row.get("fmp_industry"))
+        else "sec_sic"
+        if not pd.isna(row.get("sic_sector")) or not pd.isna(row.get("sic_description"))
+        else pd.NA,
         axis=1,
     )
 

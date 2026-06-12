@@ -69,10 +69,15 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 | Metric | Value |
 | --- | ---: |
 | Security master symbols | 11,803 |
-| Stock-classified symbols | 6,923 |
+| Stock-classified symbols | 6,921 |
 | ETF-classified symbols | 4,861 |
-| Unknown/fund symbols | 19 |
-| Sector/industry-enriched symbols | 184 |
+| Unknown/fund symbols | 21 |
+| CIK-enriched symbols | 7,458 |
+| SIC-enriched symbols | 7,152 |
+| Sector/industry-enriched symbols | 7,232 |
+| Stock sector/industry coverage | 95.88% |
+| FMP profile sector source | 420 |
+| SEC SIC sector source | 6,812 |
 
 ## Latest Local Validation
 
@@ -97,7 +102,8 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 - Terminal event prices are last available closes, not CRSP-style delisting returns.
 - Kaggle and FMP coverage depends on available plan/data limits.
 - Yahoo adjusted historical prices and vendor volume can still distort dollar-volume estimates for heavily split-adjusted securities.
-- Sector and industry coverage depends on cached FMP profile requests and will grow incrementally under API limits.
+- SEC SIC-derived sector coverage is broad for operating companies, but it is not a vendor-grade GICS history.
+- ETF classification is intentionally not forced through SEC SIC because fund issuers do not describe ETF holdings exposure.
 
 ## Audit Files
 

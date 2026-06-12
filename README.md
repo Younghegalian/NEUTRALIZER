@@ -18,7 +18,7 @@
   <img alt="Daily bars" src="https://img.shields.io/badge/daily_bars-23.96M-243BFF?style=flat-square">
   <img alt="Symbols" src="https://img.shields.io/badge/symbols-11.8K-111111?style=flat-square">
   <img alt="SEC led" src="https://img.shields.io/badge/delisting_spine-SEC-1F6FEB?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-11_passing-2EA043?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-13_passing-2EA043?style=flat-square">
 </p>
 
 FONA, the Finance Open Network Archive, builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
@@ -31,7 +31,7 @@ This repository contains the pipeline, tests, documentation, and brand assets. G
 | --- | --- |
 | PIT-style daily OHLCV | `daily_prices` with `date + symbol` grain |
 | Active and delisted coverage | Active Yahoo bars plus SEC-candidate Yahoo recovery and Kaggle delisted archive |
-| Security classification | `security_master` with stock/ETF/fund classification, exchange, name, sector, and industry fields |
+| Security classification | `security_master` with stock/ETF/fund classification, exchange, CIK, SIC, sector, and industry fields |
 | Backtest universe | `universe_membership` rebuilt daily from price, volume, ADV20, and next-open eligibility |
 | Lifecycle-adjusted universe | `backtest_universe_membership` removes symbols after trusted delisting events |
 | Liquidity features | `liquidity_metrics` with dollar volume, ADV20, positive-volume traded days, and next open |
@@ -61,11 +61,14 @@ Security classification:
 
 | Classification | Symbols |
 | --- | ---: |
-| Stock | 6,923 |
+| Stock | 6,921 |
 | ETF | 4,861 |
 | Unknown | 18 |
-| Fund | 1 |
-| Sector/industry enriched | 184 |
+| Fund | 3 |
+| CIK enriched | 7,458 |
+| SIC enriched | 7,152 |
+| Sector/industry enriched | 7,232 |
+| Stock sector/industry coverage | 95.88% |
 
 SEC-led delisting discovery:
 
@@ -84,7 +87,7 @@ SEC-led delisting discovery:
 | --- | ---: | --- | --- |
 | `daily_prices` | 23,965,894 | `date, symbol` | Canonical OHLCV bars, adjusted close, source, delisted-source flag |
 | `symbol_master` | 11,803 | `symbol` | First/last price date, source list, active/delisted coverage flags |
-| `security_master` | 11,803 | `symbol` | Asset type, ETF flag, instrument type, name, exchange, currency, sector, industry |
+| `security_master` | 11,803 | `symbol` | Asset type, ETF flag, instrument type, name, exchange, currency, CIK, SIC, sector, industry |
 | `liquidity_metrics` | 23,965,894 | `date, symbol` | Dollar volume, ADV20, positive-volume traded days, next open |
 | `universe_membership` | 13,740,815 | `date, universe, symbol` | Tradable universe membership by date |
 | `universe_stats` | 4,231 | `date, universe` | Daily sanity metrics for universe size, median close, ADV, and volume |
@@ -114,13 +117,13 @@ Price-bar source coverage:
 
 `security_master`:
 
-| symbol | asset_type | is_etf | instrument_type | security_name | exchange | sector | industry |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| AAPL | stock | false | EQUITY | Apple Inc. | NASDAQ | Technology | Consumer Electronics |
-| BINI | stock | false | EQUITY | Bollinger Innovations, Inc. | OTC Markets OTCPK |  |  |
-| DIDIY | stock | false | EQUITY | DiDi Global Inc. | OTC Markets OTCPK |  |  |
-| SPY | etf | true | ETF | State Street SPDR S&P 500 ETF Trust | NYSEArca |  |  |
-| UVXY | etf | true | ETF | ProShares Ultra VIX Short-Term Futures ETF | Cboe US |  |  |
+| symbol | asset_type | is_etf | instrument_type | security_name | exchange | cik | sic | sector | industry |
+| --- | --- | --- | --- | --- | --- | ---: | ---: | --- | --- |
+| AAPL | stock | false | EQUITY | Apple Inc. | NASDAQ | 320193 | 3571 | Technology | Consumer Electronics |
+| BINI | stock | false | EQUITY | Bollinger Innovations, Inc. | OTC Markets OTCPK | 1499961 | 3711 | Consumer Cyclical | Motor Vehicles & Passenger Car Bodies |
+| DIDIY | stock | false | EQUITY | DiDi Global Inc. | OTC Markets OTCPK | 1764757 | 7389 | Industrials | Services-Business Services, NEC |
+| SPY | etf | true | ETF | State Street SPDR S&P 500 ETF Trust | NYSEArca | 884394 |  |  |  |
+| XOM | stock | false | EQUITY | Exxon Mobil Corporation | NYSE | 34088 | 2911 | Energy | Petroleum Refining |
 
 ## Query Contract
 
@@ -191,7 +194,8 @@ FONA uses SEC as the primary delisting discovery spine. SEC identifies delisting
 | Delisted OHLCV recovery | Yahoo chart API probe | Pulls daily bars for recoverable SEC candidate tickers |
 | Active OHLCV baseline | Yahoo chart API | Pulls current listed-symbol daily bars |
 | Supplemental delisted OHLCV | Kaggle Arandkei archive | Adds delisted historical bars available in the archive |
-| Metadata enrichment | FMP delisted and profile endpoints | Adds delisting metadata, sector, and industry when plan limits allow |
+| Metadata enrichment | SEC submissions API and bulk archive | Adds CIK, SIC, SIC description, and SIC-derived sector buckets |
+| Supplemental metadata | FMP delisted and profile endpoints | Adds delisting metadata and vendor sector/industry when plan limits allow |
 | Supplemental OHLCV | Stooq bulk archive | Attempted when available; pipeline continues without it |
 
 Yahoo chart responses are accepted only when metadata identifies a USD `EQUITY` or `ETF`; non-equity, non-USD, and placeholder `YHD` matches are rejected before normalization.
@@ -203,6 +207,12 @@ Lifecycle policy:
 - Delisting events are applied only to symbols with delisted-source price coverage to reduce ticker-reuse false positives.
 - `terminal_events` stores the last available close on or before the delisting event date. Missing terminal prices remain missing; they are not set to zero.
 - `backtest_universe_membership` excludes dates after the selected delisting event.
+
+Classification policy:
+
+- FMP profile sector/industry is preferred when cached.
+- SEC submissions CIK/SIC metadata fills `cik`, `sic`, `sic_description`, and a SIC-derived sector when FMP sector/industry is missing.
+- SEC SIC sectors are coarse research buckets, not official GICS classifications.
 
 ## Quality Controls
 
@@ -223,7 +233,7 @@ The daily audit fails if any hard data-quality rule breaks:
 Latest validation:
 
 ```text
-Ran 11 tests
+Ran 13 tests
 OK
 
 [audit] OK
@@ -278,6 +288,13 @@ $env:FONA_FMP_PROFILE_LIMIT="500"
 powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
 ```
 
+Backfill free SEC CIK/SIC classification metadata from the official nightly bulk archive:
+
+```powershell
+$env:FONA_SEC_COMPANY_USE_BULK="1"
+powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
+```
+
 ## Repository Layout
 
 ```text
@@ -309,7 +326,8 @@ Known limitations:
 - Not every historical delisted U.S. security is recoverable from public/free sources.
 - Ticker reuse can still require manual investigation when metadata is weak.
 - Yahoo adjusted historical prices and vendor volume can distort dollar-volume estimates for heavily split-adjusted securities.
-- Sector and industry coverage grows incrementally under FMP plan limits.
+- SEC SIC-derived sectors are best-effort research classifications and should not be treated as vendor-grade GICS history.
+- ETF sector exposure is not inferred from SEC issuer SIC.
 - This is daily equity/ETF infrastructure, not intraday, options, fundamentals, or live trading infrastructure.
 
 ## Data Policy

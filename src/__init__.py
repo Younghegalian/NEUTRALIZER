@@ -1,2 +1,1 @@
-"""SpectraGrid Market DB package."""
-
+"""FONA local market data package."""

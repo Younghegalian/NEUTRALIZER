@@ -9,6 +9,7 @@ from src.normalize.build_security_master import build_security_master_df
 
 
 class SecurityMasterTest(unittest.TestCase):
+    @patch("src.normalize.build_security_master._read_sec_company_metadata")
     @patch("src.normalize.build_security_master._read_fmp_profile_metadata")
     @patch("src.normalize.build_security_master._read_fmp_delisted_metadata")
     @patch("src.normalize.build_security_master._read_yahoo_metadata")
@@ -19,6 +20,7 @@ class SecurityMasterTest(unittest.TestCase):
         yahoo_mock,
         fmp_delisted_mock,
         fmp_profile_mock,
+        sec_company_mock,
     ) -> None:
         symbol_master = pd.DataFrame({"symbol": ["AAPL", "SPY", "OLD"]})
         active_mock.return_value = pd.DataFrame(
@@ -72,6 +74,19 @@ class SecurityMasterTest(unittest.TestCase):
                 }
             ]
         )
+        sec_company_mock.return_value = pd.DataFrame(
+            [
+                {
+                    "symbol": "OLD",
+                    "sec_cik": 123456,
+                    "sec_company_name": "Old Co SEC",
+                    "sec_exchange": "NYSE",
+                    "sic": 2834,
+                    "sic_description": "Pharmaceutical Preparations",
+                    "sic_sector": "Healthcare",
+                }
+            ]
+        )
 
         result = build_security_master_df(symbol_master)
 
@@ -81,6 +96,9 @@ class SecurityMasterTest(unittest.TestCase):
         self.assertEqual(by_symbol.loc["SPY", "asset_type"], "etf")
         self.assertTrue(bool(by_symbol.loc["SPY", "is_etf"]))
         self.assertEqual(by_symbol.loc["OLD", "security_name"], "Old Co.")
+        self.assertEqual(by_symbol.loc["OLD", "sector"], "Healthcare")
+        self.assertEqual(by_symbol.loc["OLD", "industry"], "Pharmaceutical Preparations")
+        self.assertEqual(by_symbol.loc["OLD", "sector_source"], "sec_sic")
 
 
 if __name__ == "__main__":

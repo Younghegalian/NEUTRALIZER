@@ -11,6 +11,7 @@ SEC delisting discovery
   -> staging parquet
   -> canonical daily_prices
   -> symbol_master
+  -> SEC CIK/SIC metadata
   -> security_master
   -> liquidity_metrics
   -> universe_membership
@@ -30,6 +31,7 @@ SEC delisting discovery
 | `kaggle_delisted_loader.py` | `data/staging/kaggle_delisted_daily_prices.parquet` | Arandkei archive loader. |
 | `fmp_delisted_metadata.py` | `data/staging/fmp_delisted_metadata.parquet` | Optional metadata enrichment. |
 | `fmp_profile_metadata.py` | `data/staging/fmp_profile_metadata.parquet` | Optional cached sector and industry enrichment. |
+| `sec_company_metadata.py` | `data/staging/sec_company_metadata.parquet` | SEC submissions CIK/SIC metadata, optionally from the nightly SEC bulk archive. |
 | `stooq_downloader.py` | `data/staging/stooq_daily_prices.parquet` | Bulk archive attempted; pipeline continues when unavailable. |
 
 ## Canonical Merge
@@ -63,10 +65,13 @@ Primary fields:
 - `security_name`
 - `exchange`
 - `currency`
+- `cik`
+- `sic`
+- `sic_description`
 - `sector`
 - `industry`
 
-Stock/ETF classification comes from Yahoo metadata and Nasdaq Trader listing metadata. Sector and industry come from the optional FMP profile cache.
+Stock/ETF classification comes from Yahoo metadata and Nasdaq Trader listing metadata. Sector and industry prefer the optional FMP profile cache and fall back to SEC submissions SIC metadata when available. SEC SIC-derived sectors are coarse research buckets, not official GICS classifications.
 
 ## Universe
 

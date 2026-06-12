@@ -25,7 +25,7 @@ def check_prereqs() -> bool:
     config.ensure_directories()
     ok = True
 
-    print("SpectraGrid Market DB prerequisite check")
+    print("FONA prerequisite check")
     print()
     print("Python packages:")
     for package in REQUIRED_PACKAGES:

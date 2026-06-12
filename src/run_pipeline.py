@@ -10,6 +10,7 @@ from src.collectors.fmp_delisted_metadata import collect_fmp_delisted_metadata
 from src.collectors.fmp_profile_metadata import collect_fmp_profile_metadata
 from src.collectors.kaggle_downloader import download_kaggle_delisted_dataset
 from src.collectors.kaggle_delisted_loader import load_kaggle_delisted
+from src.collectors.sec_company_metadata import collect_sec_company_metadata
 from src.collectors.sec_delisting_collector import (
     build_sec_delisted_candidates,
     collect_sec_delisted_candidates,
@@ -44,6 +45,7 @@ FULL_PIPELINE_STEPS = [
     "fmp_metadata",
     "normalize",
     "fmp_profiles",
+    "sec_company_metadata",
     "security_master",
     "liquidity",
     "universe",
@@ -81,6 +83,12 @@ def run_step(args: argparse.Namespace, step: str) -> None:
         collect_fmp_delisted_metadata()
     elif step == "fmp_profiles":
         collect_fmp_profile_metadata(limit=args.fmp_profile_limit)
+    elif step == "sec_company_metadata":
+        collect_sec_company_metadata(
+            limit=args.sec_company_limit,
+            use_bulk=args.sec_company_use_bulk,
+            force_bulk_download=args.force_sec_company_bulk_download,
+        )
     elif step == "collect_yahoo":
         symbols = _read_symbols_file(args.yahoo_symbols_file)
         if not symbols:
@@ -260,6 +268,25 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help="Maximum new FMP profile requests for sector/industry enrichment; cached profiles are always parsed.",
+    )
+    parser.add_argument(
+        "--sec-company-limit",
+        type=int,
+        default=0,
+        help=(
+            "Maximum new SEC submissions requests for CIK/SIC enrichment; "
+            "cached submissions are always parsed. Use -1 for uncapped."
+        ),
+    )
+    parser.add_argument(
+        "--sec-company-use-bulk",
+        action="store_true",
+        help="Use the SEC nightly submissions.zip bulk archive for CIK/SIC enrichment.",
+    )
+    parser.add_argument(
+        "--force-sec-company-bulk-download",
+        action="store_true",
+        help="Re-download the SEC submissions.zip bulk archive even when cached.",
     )
     parser.add_argument(
         "--skip-sec-doc-enrich",

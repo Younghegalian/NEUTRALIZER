@@ -40,8 +40,11 @@
 | `security_name` | Best available company/fund name. |
 | `exchange` | Best available exchange label. |
 | `currency` | Best available quote currency. |
-| `sector` | FMP profile sector when cached. |
-| `industry` | FMP profile industry when cached. |
+| `cik` | SEC Central Index Key when mapped. |
+| `sic` | SEC Standard Industrial Classification code when mapped. |
+| `sic_description` | SEC SIC description when mapped. |
+| `sector` | FMP profile sector, falling back to SEC SIC-derived sector when cached. |
+| `industry` | FMP profile industry, falling back to SEC SIC description when cached. |
 | `classification_source` | Source used for asset classification/name. |
 | `sector_source` | Source used for sector/industry enrichment. |
 

@@ -14,7 +14,7 @@ from src.utils import normalize_symbol, parse_date, write_parquet
 
 
 SEC_HEADERS = {
-    "User-Agent": "SpectraGridMarketDB/1.0 admin@example.com",
+    "User-Agent": "FONA/1.0 admin@example.com",
     "Accept-Encoding": "gzip, deflate",
 }
 SEC_ARCHIVES_ROOT = "https://www.sec.gov/Archives/"

@@ -26,6 +26,7 @@ YAHOO_FALLBACK_STAGING_PATH = STAGING_DIR / "yahoo_fallback_daily_prices.parquet
 SEC_DELISTING_FILINGS_PATH = STAGING_DIR / "sec_delisting_filings.parquet"
 SEC_FORM345_TICKER_MAP_PATH = STAGING_DIR / "sec_form345_ticker_map.parquet"
 SEC_DELISTED_CANDIDATES_PATH = STAGING_DIR / "sec_delisted_candidates.parquet"
+SEC_COMPANY_METADATA_PATH = STAGING_DIR / "sec_company_metadata.parquet"
 YAHOO_DELISTED_PROBE_STAGING_PATH = STAGING_DIR / "yahoo_delisted_probe_daily_prices.parquet"
 YAHOO_DELISTED_COVERAGE_PATH = RESEARCH_DIR / "yahoo_delisted_probe_coverage.parquet"
 
@@ -79,6 +80,9 @@ SECURITY_MASTER_COLUMNS = [
     "security_name",
     "exchange",
     "currency",
+    "cik",
+    "sic",
+    "sic_description",
     "sector",
     "industry",
     "classification_source",

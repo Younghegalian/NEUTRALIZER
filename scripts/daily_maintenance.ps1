@@ -48,6 +48,14 @@ $Python = Resolve-FonaPython
 $StartDate = if ($env:FONA_START_DATE) { $env:FONA_START_DATE } else { "2010-01-01" }
 $YahooWorkers = if ($env:FONA_YAHOO_WORKERS) { $env:FONA_YAHOO_WORKERS } else { "6" }
 $FmpProfileLimit = if ($env:FONA_FMP_PROFILE_LIMIT) { $env:FONA_FMP_PROFILE_LIMIT } else { "0" }
+$SecCompanyLimit = if ($env:FONA_SEC_COMPANY_LIMIT) { $env:FONA_SEC_COMPANY_LIMIT } else { "0" }
+$SecCompanyArgs = @("--sec-company-limit", $SecCompanyLimit)
+if ($env:FONA_SEC_COMPANY_USE_BULK -eq "1") {
+    $SecCompanyArgs += "--sec-company-use-bulk"
+}
+if ($env:FONA_FORCE_SEC_COMPANY_BULK_DOWNLOAD -eq "1") {
+    $SecCompanyArgs += "--force-sec-company-bulk-download"
+}
 $Year = (Get-Date).Year
 $Quarter = [Math]::Floor(((Get-Date).Month - 1) / 3) + 1
 
@@ -74,6 +82,7 @@ foreach ($path in @($secIndex, $secForm345)) {
 & $Python -m src.run_pipeline --step fmp_metadata --start-date $StartDate --end-date today
 & $Python -m src.run_pipeline --step normalize --start-date $StartDate --end-date today
 & $Python -m src.run_pipeline --step fmp_profiles --fmp-profile-limit $FmpProfileLimit
+& $Python -m src.run_pipeline --step sec_company_metadata @SecCompanyArgs
 & $Python -m src.run_pipeline --step security_master
 & $Python -m src.run_pipeline --step liquidity
 & $Python -m src.run_pipeline --step universe
