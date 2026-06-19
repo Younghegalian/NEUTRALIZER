@@ -60,8 +60,8 @@ Delisting events are applied only to symbols with delisted-source price coverage
 
 Annual listing and delisting fit is measured with:
 
-```powershell
-python -m src.tools.audit_market_flows --fetch-benchmarks --output data\research\market_flow_audit.csv
+```bash
+python -m src.tools.audit_market_flows --fetch-benchmarks --output data/research/market_flow_audit.csv
 ```
 
 Latest `backtest_stock_major_universe` completed-year medians:

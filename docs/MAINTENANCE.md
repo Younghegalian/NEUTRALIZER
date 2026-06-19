@@ -1,50 +1,53 @@
 # Daily Maintenance
 
-Daily maintenance is designed for a local machine that already has the required credentials and enough disk space.
+Daily maintenance is designed for a local machine that already has the required credentials, network access, and enough disk space. The canonical operator commands are Python scripts under `scripts/`, so the same workflow works on Windows, macOS, and Linux.
 
 ## Requirements
 
+- Python 3.10+
 - Python dependencies installed from `requirements.txt`
 - Kaggle token when refreshing Kaggle data
 - Optional FMP key for metadata enrichment
 - Network access to SEC and Yahoo
 
-On Windows, if `python` resolves to the Microsoft Store alias, set an explicit runtime before running manual commands:
+Install dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+If your shell's `python` points to the wrong interpreter, set `FONA_PYTHON` or run the script with the exact interpreter you want:
+
+```bash
+FONA_PYTHON=/path/to/python python scripts/daily_maintenance.py --dry-run
+```
+
+On PowerShell:
 
 ```powershell
 $env:FONA_PYTHON="C:\Path\To\python.exe"
+python scripts\daily_maintenance.py --dry-run
 ```
 
-The daily maintenance script uses `FONA_PYTHON` when set and otherwise tries a local `.venv`, normal PATH Python, and the Codex bundled Python runtime.
+## Secrets
 
-Sector and industry enrichment is incremental because FMP API limits apply. Set this before maintenance to allow new profile requests:
+Interactive setup:
 
-```powershell
-$env:FONA_FMP_PROFILE_LIMIT="200"
+```bash
+python scripts/setup_secrets.py
 ```
 
-SEC CIK/SIC enrichment is free but can be slow on first catch-up because it fetches one company-submissions JSON per CIK. Cached SEC submissions are always reused. Use an uncapped catch-up once, or cap it for staged enrichment:
+This writes local-only credentials:
 
-```powershell
-$env:FONA_SEC_COMPANY_LIMIT="-1"
-```
+- Kaggle token to `~/.kaggle/access_token`
+- FMP key to `.env.local` as `FMP_API_KEY`
 
-For a full catch-up, the official SEC nightly bulk archive is usually the cleaner route. It downloads `submissions.zip` once under `data/raw/sec/submissions/` and parses only mapped CIKs:
-
-```powershell
-$env:FONA_SEC_COMPANY_USE_BULK="1"
-```
-
-Public listing/delisting benchmark checks are optional because they call external websites. Enable them when you want the daily run to compare local annual flows with StockAnalysis listed/delisted counts and World Bank listed-company counts:
-
-```powershell
-$env:FONA_FETCH_MARKET_FLOW_BENCHMARKS="1"
-```
+For non-interactive environments, pass secrets through your secret manager or CI environment instead of shell history where possible.
 
 ## Standard Daily Run
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
+```bash
+python scripts/daily_maintenance.py
 ```
 
 The script:
@@ -56,8 +59,8 @@ The script:
 5. Probes Yahoo for newly recoverable delisted candidates.
 6. Loads Kaggle delisted data if present.
 7. Rebuilds normalized price and symbol parquet.
-8. Refreshes cached FMP profile metadata up to `FONA_FMP_PROFILE_LIMIT`.
-9. Refreshes cached SEC CIK/SIC metadata up to `FONA_SEC_COMPANY_LIMIT`.
+8. Refreshes cached FMP profile metadata up to the configured profile limit.
+9. Refreshes cached SEC CIK/SIC metadata up to the configured company limit.
 10. Rebuilds `security_master`.
 11. Rebuilds curated corporate-action evidence sources.
 12. Recomputes price-quality flags, return-quality flags, liquidity metrics, and universe tables.
@@ -70,29 +73,73 @@ The script:
 19. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
 20. Runs unit tests.
 
+Preview resolved configuration without doing work:
+
+```bash
+python scripts/daily_maintenance.py --dry-run
+```
+
+## Common Options
+
+Incrementally enrich sector and industry metadata when FMP quota allows:
+
+```bash
+python scripts/daily_maintenance.py --fmp-profile-limit 500
+```
+
+Backfill free SEC CIK/SIC classification metadata from the official nightly bulk archive:
+
+```bash
+python scripts/daily_maintenance.py --sec-company-use-bulk
+```
+
+Fetch live public listing/delisting benchmark inputs during the flow audit:
+
+```bash
+python scripts/daily_maintenance.py --fetch-market-flow-benchmarks
+```
+
+Use staged SEC enrichment limits:
+
+```bash
+python scripts/daily_maintenance.py --sec-company-limit 200
+```
+
+The same options can be supplied through environment variables when a scheduler prefers environment-based configuration:
+
+| Environment variable | Equivalent CLI option |
+| --- | --- |
+| `FONA_START_DATE` | `--start-date` |
+| `FONA_YAHOO_WORKERS` | `--yahoo-workers` |
+| `FONA_FMP_PROFILE_LIMIT` | `--fmp-profile-limit` |
+| `FONA_SEC_COMPANY_LIMIT` | `--sec-company-limit` |
+| `FONA_SEC_COMPANY_USE_BULK=1` | `--sec-company-use-bulk` |
+| `FONA_FORCE_SEC_COMPANY_BULK_DOWNLOAD=1` | `--force-sec-company-bulk-download` |
+| `FONA_FETCH_MARKET_FLOW_BENCHMARKS=1` | `--fetch-market-flow-benchmarks` |
+
 ## Faster Manual Runs
 
 Refresh active data only:
 
-```powershell
+```bash
 python -m src.run_pipeline --step collect_yahoo_active --start-date 2010-01-01 --end-date today --yahoo-workers 6 --force-yahoo-refresh
 ```
 
 Refresh SEC candidates only:
 
-```powershell
+```bash
 python -m src.run_pipeline --step collect_sec_delisted_candidates --sec-start-year 2010 --skip-sec-doc-enrich
 ```
 
 Probe delisted candidates only:
 
-```powershell
+```bash
 python -m src.run_pipeline --step probe_yahoo_delisted --start-date 2010-01-01 --end-date today --yahoo-workers 6
 ```
 
 Rebuild local database from existing staging files:
 
-```powershell
+```bash
 python -m src.run_pipeline --step normalize --start-date 2010-01-01 --end-date today
 python -m src.run_pipeline --step fmp_profiles --fmp-profile-limit 0
 python -m src.run_pipeline --step sec_company_metadata --sec-company-limit 0
@@ -109,20 +156,20 @@ python -m src.run_pipeline --step duckdb
 
 Rebuild delisting outcomes from cached SEC documents only:
 
-```powershell
+```bash
 python -m src.run_pipeline --step delisting_outcomes --skip-delisting-outcome-doc-fetch
 ```
 
 Audit the current DuckDB daily bars:
 
-```powershell
+```bash
 python -m src.tools.audit_daily_prices
 ```
 
 Audit annual listing and delisting flow rates:
 
-```powershell
-python -m src.tools.audit_market_flows --fetch-benchmarks --output data\research\market_flow_audit.csv
+```bash
+python -m src.tools.audit_market_flows --fetch-benchmarks --output data/research/market_flow_audit.csv
 ```
 
 The flow audit reports base and lifecycle-adjusted scopes. Use `backtest_stock_major_universe` as the closest backtest-ready public-market comparison scope. The audit separates price/universe behavior from event coverage:
@@ -138,18 +185,30 @@ There is no separate hidden data fingerprint ledger. The effective local fingerp
 
 Preview a reset:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\reset_local_data.ps1
+```bash
+python scripts/reset_local_data.py
 ```
 
 Remove derived artifacts while keeping raw API/vendor caches:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\reset_local_data.ps1 -GeneratedOnly -Force
+```bash
+python scripts/reset_local_data.py --generated-only --force
 ```
 
 Blank the whole local data cache, including raw Yahoo/FMP/SEC/Kaggle files:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\reset_local_data.ps1 -AllLocalData -Force
+```bash
+python scripts/reset_local_data.py --all-local-data --force
 ```
+
+## Windows PowerShell Wrappers
+
+Windows users can still use the existing wrappers if they prefer PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup_secrets.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\reset_local_data.ps1
+```
+
+The Python scripts are the cross-platform source of truth for new operator documentation.

@@ -1,66 +1,55 @@
+param(
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$ExtraArgs
+)
+
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+Set-Location $ProjectRoot
 
-function Read-SecretPlain {
-    param([string]$Prompt)
+function Test-PythonCandidate {
+    param([string]$Candidate)
 
-    $secure = Read-Host -Prompt $Prompt -AsSecureString
-    if ($secure.Length -eq 0) {
-        return ""
-    }
-
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try {
-        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        & $Candidate -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" | Out-Null
+        return $true
     }
-    finally {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    catch {
+        return $false
     }
 }
 
-function Set-LocalEnvValue {
-    param(
-        [string]$Path,
-        [string]$Key,
-        [string]$Value
-    )
+function Resolve-FonaPython {
+    if ($env:FONA_PYTHON) {
+        if (Test-PythonCandidate -Candidate $env:FONA_PYTHON) {
+            return $env:FONA_PYTHON
+        }
+        throw "FONA_PYTHON is set but is not a usable Python 3.10+ executable: $env:FONA_PYTHON"
+    }
 
-    $lines = @()
-    if (Test-Path -LiteralPath $Path) {
-        $lines = Get-Content -LiteralPath $Path | Where-Object {
-            $_ -notmatch "^\s*$([Regex]::Escape($Key))="
+    foreach ($commandName in @("python", "python3")) {
+        $command = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($command -and $command.Source -and $command.Source -notlike "*\Microsoft\WindowsApps\*") {
+            if (Test-PythonCandidate -Candidate $command.Source) {
+                return $command.Source
+            }
         }
     }
 
-    if ($Value) {
-        $lines += "$Key=$Value"
+    foreach ($candidate in @(
+        (Join-Path $ProjectRoot ".venv\Scripts\python.exe"),
+        (Join-Path $ProjectRoot ".venv\bin\python"),
+        (Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe")
+    )) {
+        if ((Test-Path -LiteralPath $candidate) -and (Test-PythonCandidate -Candidate $candidate)) {
+            return $candidate
+        }
     }
 
-    Set-Content -LiteralPath $Path -Value $lines -Encoding UTF8
+    throw "No usable Python 3.10+ executable found. Set FONA_PYTHON to your Python path."
 }
 
-$kaggleToken = Read-SecretPlain "KAGGLE_API_TOKEN"
-$fmpKey = Read-SecretPlain "FMP_API_KEY optional, press Enter to skip"
-
-if ($kaggleToken) {
-    $kaggleDir = Join-Path $env:USERPROFILE ".kaggle"
-    New-Item -ItemType Directory -Force -Path $kaggleDir | Out-Null
-    $accessTokenPath = Join-Path $kaggleDir "access_token"
-    Set-Content -LiteralPath $accessTokenPath -Value $kaggleToken -NoNewline -Encoding ASCII
-    Write-Host "Saved Kaggle token to $accessTokenPath"
-}
-else {
-    Write-Host "Skipped Kaggle token."
-}
-
-$envPath = Join-Path $ProjectRoot ".env.local"
-Set-LocalEnvValue -Path $envPath -Key "FMP_API_KEY" -Value $fmpKey
-if ($fmpKey) {
-    Write-Host "Saved FMP key to $envPath"
-}
-else {
-    Write-Host "Skipped FMP key."
-}
-
-Write-Host "Done. Run: powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1"
+$Python = Resolve-FonaPython
+& $Python (Join-Path $PSScriptRoot "setup_secrets.py") @ExtraArgs
+exit $LASTEXITCODE

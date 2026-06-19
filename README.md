@@ -312,8 +312,8 @@ OK
 
 Annual market-flow validation:
 
-```powershell
-python -m src.tools.audit_market_flows --fetch-benchmarks --output data\research\market_flow_audit.csv
+```bash
+python -m src.tools.audit_market_flows --fetch-benchmarks --output data/research/market_flow_audit.csv
 ```
 
 Latest `backtest_stock_major_universe` completed-year medians:
@@ -330,40 +330,38 @@ Latest `backtest_stock_major_universe` completed-year medians:
 
 Install dependencies:
 
-```powershell
+```bash
 python -m pip install -r requirements.txt
 ```
 
 Set local secrets:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\setup_secrets.ps1
+```bash
+python scripts/setup_secrets.py
 ```
 
 Run a full rebuild:
 
-```powershell
+```bash
 python -m src.run_pipeline --start-date 2010-01-01 --end-date today
 ```
 
 Run daily maintenance:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
+```bash
+python scripts/daily_maintenance.py
 ```
 
 Incrementally enrich sector and industry metadata when FMP quota allows:
 
-```powershell
-$env:FONA_FMP_PROFILE_LIMIT="500"
-powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
+```bash
+python scripts/daily_maintenance.py --fmp-profile-limit 500
 ```
 
 Backfill free SEC CIK/SIC classification metadata from the official nightly bulk archive:
 
-```powershell
-$env:FONA_SEC_COMPANY_USE_BULK="1"
-powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
+```bash
+python scripts/daily_maintenance.py --sec-company-use-bulk
 ```
 
 ## Repository Layout
@@ -371,7 +369,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
 ```text
 assets/brand/               FONA brand assets
 docs/                       Architecture, data dictionary, maintenance notes
-scripts/                    Operator scripts
+scripts/                    Cross-platform Python operator scripts plus Windows PowerShell wrappers
 src/collectors/             Source collectors
 src/normalize/              Canonical prices, symbol master, and security master
 src/universe/               Liquidity metrics and daily universe

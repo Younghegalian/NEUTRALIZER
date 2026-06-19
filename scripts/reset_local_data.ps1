@@ -1,90 +1,64 @@
 param(
     [switch]$GeneratedOnly,
     [switch]$AllLocalData,
-    [switch]$Force
+    [switch]$Force,
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$ExtraArgs
 )
 
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$DataRoot = Join-Path $ProjectRoot "data"
+Set-Location $ProjectRoot
 
-if (-not $GeneratedOnly -and -not $AllLocalData) {
-    $GeneratedOnly = $true
-}
+function Test-PythonCandidate {
+    param([string]$Candidate)
 
-if ($GeneratedOnly -and $AllLocalData) {
-    throw "Choose either -GeneratedOnly or -AllLocalData, not both."
-}
-
-if (-not (Test-Path -LiteralPath $DataRoot)) {
-    Write-Host "No data directory found."
-    exit 0
-}
-
-if ($AllLocalData) {
-    $targets = @(
-        (Join-Path $DataRoot "pit_market.duckdb"),
-        (Join-Path $DataRoot "raw"),
-        (Join-Path $DataRoot "staging"),
-        (Join-Path $DataRoot "normalized"),
-        (Join-Path $DataRoot "research")
-    )
-}
-else {
-    $targets = @(
-        (Join-Path $DataRoot "pit_market.duckdb"),
-        (Join-Path $DataRoot "staging"),
-        (Join-Path $DataRoot "normalized"),
-        (Join-Path $DataRoot "research")
-    )
-}
-
-$resolvedDataRoot = (Resolve-Path -LiteralPath $DataRoot).Path
-$existingTargets = @()
-
-foreach ($target in $targets) {
-    if (Test-Path -LiteralPath $target) {
-        $resolvedTarget = (Resolve-Path -LiteralPath $target).Path
-        if (-not $resolvedTarget.StartsWith($resolvedDataRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to remove path outside data root: $resolvedTarget"
-        }
-        $existingTargets += $resolvedTarget
+    try {
+        & $Candidate -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" | Out-Null
+        return $true
+    }
+    catch {
+        return $false
     }
 }
 
-if ($existingTargets.Count -eq 0) {
-    Write-Host "No local data artifacts found."
-    exit 0
+function Resolve-FonaPython {
+    if ($env:FONA_PYTHON) {
+        if (Test-PythonCandidate -Candidate $env:FONA_PYTHON) {
+            return $env:FONA_PYTHON
+        }
+        throw "FONA_PYTHON is set but is not a usable Python 3.10+ executable: $env:FONA_PYTHON"
+    }
+
+    foreach ($commandName in @("python", "python3")) {
+        $command = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($command -and $command.Source -and $command.Source -notlike "*\Microsoft\WindowsApps\*") {
+            if (Test-PythonCandidate -Candidate $command.Source) {
+                return $command.Source
+            }
+        }
+    }
+
+    foreach ($candidate in @(
+        (Join-Path $ProjectRoot ".venv\Scripts\python.exe"),
+        (Join-Path $ProjectRoot ".venv\bin\python"),
+        (Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe")
+    )) {
+        if ((Test-Path -LiteralPath $candidate) -and (Test-PythonCandidate -Candidate $candidate)) {
+            return $candidate
+        }
+    }
+
+    throw "No usable Python 3.10+ executable found. Set FONA_PYTHON to your Python path."
 }
 
-Write-Host "FONA local data reset"
-Write-Host "Project: $ProjectRoot"
-Write-Host "Mode: $(if ($AllLocalData) { 'all local data' } else { 'generated artifacts only' })"
-Write-Host "Targets:"
-$existingTargets | ForEach-Object { Write-Host "  $_" }
+$ScriptArgs = @()
+if ($GeneratedOnly) { $ScriptArgs += "--generated-only" }
+if ($AllLocalData) { $ScriptArgs += "--all-local-data" }
+if ($Force) { $ScriptArgs += "--force" }
+if ($ExtraArgs) { $ScriptArgs += $ExtraArgs }
 
-if (-not $Force) {
-    Write-Host ""
-    Write-Host "Preview only. Re-run with -Force to remove these paths."
-    exit 0
-}
-
-foreach ($target in $existingTargets) {
-    Remove-Item -LiteralPath $target -Recurse -Force
-    Write-Host "Removed $target"
-}
-
-foreach ($dir in @("raw", "staging", "normalized", "research")) {
-    $path = Join-Path $DataRoot $dir
-    New-Item -ItemType Directory -Path $path -Force | Out-Null
-    New-Item -ItemType File -Path (Join-Path $path ".gitkeep") -Force | Out-Null
-}
-
-foreach ($dir in @("raw\sec", "raw\fmp", "raw\kaggle_delisted", "raw\stooq", "raw\yahoo")) {
-    $path = Join-Path $DataRoot $dir
-    New-Item -ItemType Directory -Path $path -Force | Out-Null
-    New-Item -ItemType File -Path (Join-Path $path ".gitkeep") -Force | Out-Null
-}
-
-Write-Host "Local data state reset complete."
+$Python = Resolve-FonaPython
+& $Python (Join-Path $PSScriptRoot "reset_local_data.py") @ScriptArgs
+exit $LASTEXITCODE
