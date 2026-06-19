@@ -14,11 +14,11 @@
 </p>
 
 <p align="center">
-  <img alt="DuckDB" src="https://img.shields.io/badge/storage-DuckDB-FFF000?style=flat-square">
-  <img alt="Daily bars" src="https://img.shields.io/badge/daily_bars-24.01M-243BFF?style=flat-square">
-  <img alt="Symbols" src="https://img.shields.io/badge/symbols-11.8K-111111?style=flat-square">
-  <img alt="SEC led" src="https://img.shields.io/badge/delisting_spine-SEC-1F6FEB?style=flat-square">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-21_passing-2EA043?style=flat-square">
+  <a href="docs/ARCHITECTURE.md#canonical-merge"><img alt="DuckDB storage architecture" src="https://img.shields.io/badge/storage-DuckDB-FFF000?style=flat-square"></a>
+  <a href="docs/DATA_DICTIONARY.md#daily_prices"><img alt="Daily bars data dictionary" src="https://img.shields.io/badge/daily_bars-24.01M-243BFF?style=flat-square"></a>
+  <a href="docs/COVERAGE.md#latest-classification-coverage"><img alt="Symbol coverage" src="https://img.shields.io/badge/symbols-11.8K-111111?style=flat-square"></a>
+  <a href="docs/COVERAGE.md#latest-local-coverage"><img alt="SEC-led delisting coverage" src="https://img.shields.io/badge/delisting_spine-SEC-1F6FEB?style=flat-square"></a>
+  <a href="tests/"><img alt="Unit tests" src="https://img.shields.io/badge/tests-21_passing-2EA043?style=flat-square"></a>
 </p>
 
 FONA, the Finance Open Network Archive, builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
