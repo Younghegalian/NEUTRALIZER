@@ -9,7 +9,13 @@ import pandas as pd
 
 from src import config
 from src.db.build_duckdb import build_duckdb
-from src.db.query_examples import get_corporate_action_evidence, get_prices, get_return_quality_flags, get_universe
+from src.db.query_examples import (
+    get_corporate_action_evidence,
+    get_prices,
+    get_return_quality_flags,
+    get_security_classification_catalog,
+    get_universe,
+)
 
 
 class DuckDBTest(unittest.TestCase):
@@ -19,6 +25,7 @@ class DuckDBTest(unittest.TestCase):
             daily_prices_path = root / "daily_prices.parquet"
             symbol_master_path = root / "symbol_master.parquet"
             security_master_path = root / "security_master.parquet"
+            classification_catalog_path = root / "security_classification_catalog.parquet"
             liquidity_path = root / "liquidity_metrics.parquet"
             membership_path = root / "universe_membership.parquet"
             stats_path = root / "universe_stats.parquet"
@@ -85,6 +92,32 @@ class DuckDBTest(unittest.TestCase):
                 ],
                 columns=config.SECURITY_MASTER_COLUMNS,
             ).to_parquet(security_master_path, index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "symbol": "GOOD",
+                        "asset_type": "stock",
+                        "security_name": "Good Co.",
+                        "sector": "Industrials",
+                        "industry": "Testing",
+                        "category": None,
+                        "asset_class": "equity",
+                        "label_source": "test",
+                        "label_confidence": "high",
+                        "is_etf": False,
+                        "is_leveraged_or_inverse": False,
+                        "quality_adv20": None,
+                        "age_years": None,
+                        "traded_days_20": None,
+                        "selection_reason": "test",
+                        "data_as_of": date(2020, 1, 2),
+                        "policy_version": "test",
+                        "catalog_hash": "abc123",
+                        "notes": "test",
+                    }
+                ],
+                columns=config.SECURITY_CLASSIFICATION_CATALOG_COLUMNS,
+            ).to_parquet(classification_catalog_path, index=False)
             pd.DataFrame(
                 [
                     {
@@ -208,6 +241,7 @@ class DuckDBTest(unittest.TestCase):
                 daily_prices_path=daily_prices_path,
                 symbol_master_path=symbol_master_path,
                 security_master_path=security_master_path,
+                security_classification_catalog_path=classification_catalog_path,
                 liquidity_metrics_path=liquidity_path,
                 universe_membership_path=membership_path,
                 universe_stats_path=stats_path,
@@ -229,6 +263,9 @@ class DuckDBTest(unittest.TestCase):
             self.assertEqual(prices.iloc[0]["symbol"], "GOOD")
             self.assertEqual(len(get_corporate_action_evidence(["GOOD"], db_path=db_path)), 1)
             self.assertEqual(len(get_return_quality_flags(["GOOD"], db_path=db_path)), 1)
+            catalog = get_security_classification_catalog(["GOOD"], db_path=db_path)
+            self.assertEqual(len(catalog), 1)
+            self.assertEqual(catalog.iloc[0]["catalog_hash"], "abc123")
 
 
 if __name__ == "__main__":

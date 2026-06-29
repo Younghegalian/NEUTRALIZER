@@ -104,6 +104,28 @@ def get_security_master(
         con.close()
 
 
+def get_security_classification_catalog(
+    symbols: list[str] | None = None,
+    db_path: Path = config.DUCKDB_PATH,
+) -> pd.DataFrame:
+    con = _connect(db_path)
+    try:
+        if not symbols:
+            return con.execute("SELECT * FROM security_classification_catalog ORDER BY symbol").fetchdf()
+        placeholders = ",".join(["?"] * len(symbols))
+        return con.execute(
+            f"""
+            SELECT *
+            FROM security_classification_catalog
+            WHERE symbol IN ({placeholders})
+            ORDER BY symbol
+            """,
+            symbols,
+        ).fetchdf()
+    finally:
+        con.close()
+
+
 def get_delisting_outcomes(
     symbols: list[str] | None = None,
     db_path: Path = config.DUCKDB_PATH,

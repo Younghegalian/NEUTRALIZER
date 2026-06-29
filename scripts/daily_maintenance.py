@@ -128,6 +128,7 @@ def main() -> int:
         "security_master",
         "corporate_action_evidence",
         "liquidity",
+        "classification_catalog",
         "universe",
         "backtest_universe",
         "delisting_outcomes",

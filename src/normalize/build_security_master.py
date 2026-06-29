@@ -257,11 +257,11 @@ def build_security_master_df(symbol_master: pd.DataFrame) -> pd.DataFrame:
     result["fmp_sector"] = result["sector"] if "sector" in result.columns else pd.NA
     result["fmp_industry"] = result["industry"] if "industry" in result.columns else pd.NA
     result["sector"] = result.apply(
-        lambda row: _first_notna(row.get("fmp_sector"), row.get("sic_sector")),
+        lambda row: _first_notna(row.get("sic_sector"), row.get("fmp_sector")),
         axis=1,
     )
     result["industry"] = result.apply(
-        lambda row: _first_notna(row.get("fmp_industry"), row.get("sic_description")),
+        lambda row: _first_notna(row.get("sic_description"), row.get("fmp_industry")),
         axis=1,
     )
     result["security_name"] = result.apply(
@@ -318,10 +318,10 @@ def build_security_master_df(symbol_master: pd.DataFrame) -> pd.DataFrame:
         axis=1,
     )
     result["sector_source"] = result.apply(
-        lambda row: "fmp_profile"
-        if not pd.isna(row.get("fmp_sector")) or not pd.isna(row.get("fmp_industry"))
-        else "sec_sic"
+        lambda row: "sec_sic"
         if not pd.isna(row.get("sic_sector")) or not pd.isna(row.get("sic_description"))
+        else "fmp_profile"
+        if not pd.isna(row.get("fmp_sector")) or not pd.isna(row.get("fmp_industry"))
         else pd.NA,
         axis=1,
     )

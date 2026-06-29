@@ -34,6 +34,7 @@ YAHOO_DELISTED_COVERAGE_PATH = RESEARCH_DIR / "yahoo_delisted_probe_coverage.par
 DAILY_PRICES_PATH = NORMALIZED_DIR / "daily_prices.parquet"
 SYMBOL_MASTER_PATH = NORMALIZED_DIR / "symbol_master.parquet"
 SECURITY_MASTER_PATH = NORMALIZED_DIR / "security_master.parquet"
+SECURITY_CLASSIFICATION_CATALOG_PATH = NORMALIZED_DIR / "security_classification_catalog.parquet"
 DUPLICATE_REPORT_PATH = NORMALIZED_DIR / "duplicate_report.parquet"
 BAD_ROWS_REPORT_PATH = NORMALIZED_DIR / "bad_rows_report.parquet"
 
@@ -322,6 +323,28 @@ SECURITY_MASTER_COLUMNS = [
     "industry",
     "classification_source",
     "sector_source",
+]
+
+SECURITY_CLASSIFICATION_CATALOG_COLUMNS = [
+    "symbol",
+    "asset_type",
+    "security_name",
+    "sector",
+    "industry",
+    "category",
+    "asset_class",
+    "label_source",
+    "label_confidence",
+    "is_etf",
+    "is_leveraged_or_inverse",
+    "quality_adv20",
+    "age_years",
+    "traded_days_20",
+    "selection_reason",
+    "data_as_of",
+    "policy_version",
+    "catalog_hash",
+    "notes",
 ]
 
 LIQUIDITY_COLUMNS = [

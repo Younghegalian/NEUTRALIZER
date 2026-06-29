@@ -22,6 +22,7 @@ def build_duckdb(
     daily_prices_path: Path = config.DAILY_PRICES_PATH,
     symbol_master_path: Path = config.SYMBOL_MASTER_PATH,
     security_master_path: Path = config.SECURITY_MASTER_PATH,
+    security_classification_catalog_path: Path = config.SECURITY_CLASSIFICATION_CATALOG_PATH,
     liquidity_metrics_path: Path = config.LIQUIDITY_METRICS_PATH,
     universe_membership_path: Path = config.UNIVERSE_MEMBERSHIP_PATH,
     universe_stats_path: Path = config.UNIVERSE_STATS_PATH,
@@ -45,6 +46,7 @@ def build_duckdb(
             "daily_prices",
             "symbol_master",
             "security_master",
+            "security_classification_catalog",
             "liquidity_metrics",
             "universe_membership",
             "universe_stats",
@@ -109,6 +111,31 @@ def build_duckdb(
                 industry TEXT,
                 classification_source TEXT,
                 sector_source TEXT
+            )
+            """
+        )
+        con.execute(
+            """
+            CREATE TABLE security_classification_catalog (
+                symbol TEXT,
+                asset_type TEXT,
+                security_name TEXT,
+                sector TEXT,
+                industry TEXT,
+                category TEXT,
+                asset_class TEXT,
+                label_source TEXT,
+                label_confidence TEXT,
+                is_etf BOOLEAN,
+                is_leveraged_or_inverse BOOLEAN,
+                quality_adv20 DOUBLE,
+                age_years DOUBLE,
+                traded_days_20 INTEGER,
+                selection_reason TEXT,
+                data_as_of DATE,
+                policy_version TEXT,
+                catalog_hash TEXT,
+                notes TEXT
             )
             """
         )
@@ -415,6 +442,34 @@ def build_duckdb(
         )
         _insert_from_parquet(
             con,
+            "security_classification_catalog",
+            security_classification_catalog_path,
+            """
+            SELECT
+                CAST(symbol AS TEXT),
+                CAST(asset_type AS TEXT),
+                CAST(security_name AS TEXT),
+                CAST(sector AS TEXT),
+                CAST(industry AS TEXT),
+                CAST(category AS TEXT),
+                CAST(asset_class AS TEXT),
+                CAST(label_source AS TEXT),
+                CAST(label_confidence AS TEXT),
+                CAST(is_etf AS BOOLEAN),
+                CAST(is_leveraged_or_inverse AS BOOLEAN),
+                CAST(quality_adv20 AS DOUBLE),
+                CAST(age_years AS DOUBLE),
+                CAST(traded_days_20 AS INTEGER),
+                CAST(selection_reason AS TEXT),
+                CAST(data_as_of AS DATE),
+                CAST(policy_version AS TEXT),
+                CAST(catalog_hash AS TEXT),
+                CAST(notes AS TEXT)
+            FROM read_parquet('{path}')
+            """,
+        )
+        _insert_from_parquet(
+            con,
             "liquidity_metrics",
             liquidity_metrics_path,
             """
@@ -695,6 +750,7 @@ def build_duckdb(
 
         con.execute("CREATE INDEX IF NOT EXISTS idx_prices_date_symbol ON daily_prices(date, symbol)")
         con.execute("CREATE INDEX IF NOT EXISTS idx_security_symbol ON security_master(symbol)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_classification_catalog_symbol ON security_classification_catalog(symbol)")
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_universe_date_name ON universe_membership(date, universe_name)"
         )

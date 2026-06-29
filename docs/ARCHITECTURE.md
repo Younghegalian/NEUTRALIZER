@@ -15,6 +15,7 @@ SEC delisting discovery
   -> security_master
   -> corporate_action_evidence
   -> price_quality_flags / return_quality_flags / liquidity_metrics
+  -> security_classification_catalog
   -> universe_membership
   -> security_events / terminal_events
   -> delisting_outcomes
@@ -50,6 +51,7 @@ SEC delisting discovery
 - `data/normalized/daily_prices.parquet`
 - `data/normalized/symbol_master.parquet`
 - `data/normalized/security_master.parquet`
+- `data/normalized/security_classification_catalog.parquet`
 - `data/normalized/duplicate_report.parquet`
 - `data/normalized/bad_rows_report.parquet`
 
@@ -97,7 +99,18 @@ Primary fields:
 - `sector`
 - `industry`
 
-Stock/ETF classification comes from Yahoo metadata and Nasdaq Trader listing metadata. Sector and industry prefer the optional FMP profile cache and fall back to SEC submissions SIC metadata when available. SEC SIC-derived sectors are coarse research buckets, not official GICS classifications.
+Stock/ETF classification comes from Yahoo metadata and Nasdaq Trader listing metadata. Sector and industry prefer SEC submissions SIC metadata and fall back to the optional FMP profile cache when SEC SIC metadata is unavailable. SEC SIC-derived sectors are coarse research buckets, not official GICS classifications.
+
+## Security Classification Catalog
+
+`src/normalize/build_classification_catalog.py` builds a small handoff catalog for labels that a live engine's default SEC SIC labeler cannot reproduce.
+
+It does not duplicate all SEC SIC labels from `security_master`. It includes:
+
+- Non-ETF rows whose `security_master` sector came from a non-SIC source such as the cached FMP fallback.
+- ETF rows with no sector source that pass the durable/liquid starter policy: recent price coverage, at least 5 years of price history, `quality_adv20 >= 25,000,000`, and at least 15 quality traded days in the latest 20-day window.
+
+The catalog writes `data/normalized/security_classification_catalog.parquet` and is embedded in `pit_market.duckdb` as `security_classification_catalog`. Strategy bundles and live engines can use its `policy_version` and `catalog_hash` to verify that FONA-only labels were delivered alongside the strategy.
 
 ## Universe
 

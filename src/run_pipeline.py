@@ -25,6 +25,7 @@ from src.collectors.yahoo_fallback_downloader import (
     collect_yahoo_fallback,
 )
 from src.db.build_duckdb import build_duckdb
+from src.normalize.build_classification_catalog import build_security_classification_catalog
 from src.normalize.build_security_master import build_security_master
 from src.normalize.build_symbol_aliases import build_symbol_aliases
 from src.normalize.normalize_prices import normalize_prices
@@ -54,6 +55,7 @@ FULL_PIPELINE_STEPS = [
     "security_master",
     "corporate_action_evidence",
     "liquidity",
+    "classification_catalog",
     "universe",
     "backtest_universe",
     "delisting_outcomes",
@@ -150,6 +152,8 @@ def run_step(args: argparse.Namespace, step: str) -> None:
         build_return_quality_flags()
     elif step == "liquidity":
         compute_liquidity()
+    elif step == "classification_catalog":
+        build_security_classification_catalog()
     elif step == "universe":
         build_universe()
         build_universe_stats()

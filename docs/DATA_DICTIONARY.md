@@ -43,10 +43,36 @@
 | `cik` | SEC Central Index Key when mapped. |
 | `sic` | SEC Standard Industrial Classification code when mapped. |
 | `sic_description` | SEC SIC description when mapped. |
-| `sector` | FMP profile sector, falling back to SEC SIC-derived sector when cached. |
-| `industry` | FMP profile industry, falling back to SEC SIC description when cached. |
+| `sector` | SEC SIC-derived sector, falling back to FMP profile sector when cached. |
+| `industry` | SEC SIC description, falling back to FMP profile industry when cached. |
 | `classification_source` | Source used for asset classification/name. |
 | `sector_source` | Source used for sector/industry enrichment. |
+
+## `security_classification_catalog`
+
+FONA-only handoff labels for consumers that already run their own SEC SIC labeler but need the extra labels FONA created outside that path.
+
+| Column | Description |
+| --- | --- |
+| `symbol` | Internal symbol. |
+| `asset_type` | Asset type carried into the label handoff, usually `etf`, `stock`, or `fund`. |
+| `security_name` | Name used by the catalog rule. |
+| `sector` | FONA supplemental sector label when one is appropriate. Broad equity, bond, commodity, and unknown ETF categories intentionally leave this null. |
+| `industry` | Supplemental industry/category label such as `Technology Select Sector ETF` or `S&P 500 ETF`. |
+| `category` | ETF/fallback category such as `sector_etf`, `broad_us_equity`, `bond_treasury`, or `unknown_etf`. |
+| `asset_class` | Broad asset class label such as `equity`, `bond`, `commodity`, `currency`, `crypto`, or `unknown`. |
+| `label_source` | Source of the supplemental label, for example `fona_etf_rule` or `fmp_profile`. |
+| `label_confidence` | `high`, `medium`, or `review`. |
+| `is_etf` | ETF flag. |
+| `is_leveraged_or_inverse` | True when the ETF name matches leveraged/inverse keywords such as `UltraPro`, `2X`, `3X`, `Bull`, `Bear`, or `Short QQQ`. |
+| `quality_adv20` | Latest quality-filtered ADV20 used to select ETF rows. Null for non-ETF fallback rows. |
+| `age_years` | Price-history age in years used to select ETF rows. Null for non-ETF fallback rows. |
+| `traded_days_20` | Latest quality traded-days count used to select ETF rows. Null for non-ETF fallback rows. |
+| `selection_reason` | Deterministic policy reason for including the row. |
+| `data_as_of` | Latest source date used by the catalog build. |
+| `policy_version` | Catalog policy version. |
+| `catalog_hash` | SHA-256 hash of the catalog rows excluding the hash column itself. |
+| `notes` | Short rule/provenance note. |
 
 ## `liquidity_metrics`
 

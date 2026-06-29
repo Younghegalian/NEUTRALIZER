@@ -63,15 +63,17 @@ The script:
 9. Refreshes cached SEC CIK/SIC metadata up to the configured company limit.
 10. Rebuilds `security_master`.
 11. Rebuilds curated corporate-action evidence sources.
-12. Recomputes price-quality flags, return-quality flags, liquidity metrics, and universe tables.
-13. Rebuilds lifecycle events, terminal events, and the lifecycle-adjusted backtest universe.
-14. Rebuilds delisting outcome enrichment from selected SEC Form 25 documents.
-15. Rebuilds terminal-event validity and the liquidation-safe terminal subset.
-16. Rebuilds curated symbol aliases.
-17. Rebuilds `data/pit_market.duckdb`.
-18. Audits daily-bar grain, nulls, OHLC validity, date validity, global next-open execution, price/return-quality exclusions, delisting outcome joins, terminal-event validity, and table integrity.
-19. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
-20. Runs unit tests.
+12. Recomputes price-quality flags, return-quality flags, and liquidity metrics.
+13. Rebuilds the non-SIC security classification handoff catalog.
+14. Rebuilds universe tables.
+15. Rebuilds lifecycle events, terminal events, and the lifecycle-adjusted backtest universe.
+16. Rebuilds delisting outcome enrichment from selected SEC Form 25 documents.
+17. Rebuilds terminal-event validity and the liquidation-safe terminal subset.
+18. Rebuilds curated symbol aliases.
+19. Rebuilds `data/pit_market.duckdb`.
+20. Audits daily-bar grain, nulls, OHLC validity, date validity, global next-open execution, price/return-quality exclusions, delisting outcome joins, terminal-event validity, and table integrity.
+21. Audits annual listing/delisting flow rates and writes `data/research/market_flow_audit.csv`.
+22. Runs unit tests.
 
 Preview resolved configuration without doing work:
 
@@ -146,6 +148,7 @@ python -m src.run_pipeline --step sec_company_metadata --sec-company-limit 0
 python -m src.run_pipeline --step security_master
 python -m src.run_pipeline --step corporate_action_evidence
 python -m src.run_pipeline --step liquidity
+python -m src.run_pipeline --step classification_catalog
 python -m src.run_pipeline --step universe
 python -m src.run_pipeline --step backtest_universe
 python -m src.run_pipeline --step delisting_outcomes

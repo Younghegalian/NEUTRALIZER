@@ -18,7 +18,7 @@
   <a href="docs/DATA_DICTIONARY.md#daily_prices"><img alt="Daily bars data dictionary" src="https://img.shields.io/badge/daily_bars-24.01M-243BFF?style=flat-square"></a>
   <a href="docs/COVERAGE.md#latest-classification-coverage"><img alt="Symbol coverage" src="https://img.shields.io/badge/symbols-11.8K-111111?style=flat-square"></a>
   <a href="docs/COVERAGE.md#latest-local-coverage"><img alt="SEC-led delisting coverage" src="https://img.shields.io/badge/delisting_spine-SEC-1F6FEB?style=flat-square"></a>
-  <a href="tests/"><img alt="Unit tests" src="https://img.shields.io/badge/tests-21_passing-2EA043?style=flat-square"></a>
+  <a href="tests/"><img alt="Unit tests" src="https://img.shields.io/badge/tests-23_passing-2EA043?style=flat-square"></a>
 </p>
 
 FONA, the Finance Open Network Archive, builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
@@ -32,6 +32,7 @@ This repository contains the pipeline, tests, documentation, and brand assets. G
 | PIT-style daily OHLCV | `daily_prices` with `date + symbol` grain |
 | Active and delisted coverage | Active Yahoo bars plus SEC-candidate Yahoo recovery and Kaggle delisted archive |
 | Security classification | `security_master` with stock/ETF/fund classification, exchange, CIK, SIC, sector, and industry fields |
+| Live classification handoff | `security_classification_catalog` with non-SIC/FONA ETF labels for strategy bundles and live engines |
 | Backtest universe | `universe_membership` rebuilt daily from price, volume, ADV20, and next-open eligibility |
 | Lifecycle-adjusted universe | `backtest_universe_membership` removes symbols after trusted delisting events |
 | Delisting outcome layer | `delisting_outcomes` classifies selected Form 25 exits and captures SEC cash consideration when extractable |
@@ -102,6 +103,7 @@ SEC-led delisting discovery:
 | `daily_prices` | 24,007,243 | `date, symbol` | Canonical OHLCV bars, adjusted close, source, delisted-source flag |
 | `symbol_master` | 11,813 | `symbol` | First/last price date, source list, active/delisted coverage flags |
 | `security_master` | 11,813 | `symbol` | Asset type, ETF flag, instrument type, name, exchange, currency, CIK, SIC, sector, industry |
+| `security_classification_catalog` | 388 | `symbol` | FONA-only non-SIC fallback labels and selected liquid/durable ETF category labels for live-engine handoff |
 | `liquidity_metrics` | 24,007,243 | `date, symbol` | Raw and quality-filtered dollar volume, ADV20, traded days, global-calendar next open |
 | `price_quality_flags` | 192,862 | `date, symbol` | Rows excluded from tradable universe construction by quality rules |
 | `universe_membership` | 13,431,989 | `date, universe, symbol` | Tradable universe membership by date |
@@ -158,6 +160,7 @@ from src.db.query_examples import (
     get_price_panel,
     get_prices,
     get_return_quality_flags,
+    get_security_classification_catalog,
     get_security_master,
     get_symbol_aliases,
     get_universe,
@@ -169,6 +172,7 @@ backtest_symbols = get_backtest_universe("2020-01-02")
 prices = get_prices("2020-01-02", symbols[:100])
 panel = get_price_panel("2020-01-02", "2020-03-31")
 metadata = get_security_master(symbols[:100])
+classification_catalog = get_security_classification_catalog()
 outcomes = get_delisting_outcomes(["SY", "IDC", "AMN"])
 valid_terminals = get_valid_terminal_events()
 aliases = get_symbol_aliases(["FI"])
@@ -265,8 +269,8 @@ Lifecycle policy:
 
 Classification policy:
 
-- FMP profile sector/industry is preferred when cached.
-- SEC submissions CIK/SIC metadata fills `cik`, `sic`, `sic_description`, and a SIC-derived sector when FMP sector/industry is missing.
+- SEC submissions CIK/SIC metadata is the primary sector/industry source.
+- FMP profile sector/industry fills gaps when SEC SIC metadata is missing.
 - SEC SIC sectors are coarse research buckets, not official GICS classifications.
 
 Price-quality policy:

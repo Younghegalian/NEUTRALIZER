@@ -67,8 +67,8 @@ class SecurityMasterTest(unittest.TestCase):
                     "fmp_profile_name": "Apple Inc.",
                     "fmp_profile_exchange": "NASDAQ",
                     "fmp_profile_currency": "USD",
-                    "sector": "Technology",
-                    "industry": "Consumer Electronics",
+                    "sector": "Vendor Technology",
+                    "industry": "Vendor Consumer Electronics",
                     "fmp_is_etf": False,
                     "fmp_is_fund": False,
                 }
@@ -76,6 +76,15 @@ class SecurityMasterTest(unittest.TestCase):
         )
         sec_company_mock.return_value = pd.DataFrame(
             [
+                {
+                    "symbol": "AAPL",
+                    "sec_cik": 320193,
+                    "sec_company_name": "Apple Inc SEC",
+                    "sec_exchange": "NASDAQ",
+                    "sic": 3571,
+                    "sic_description": "Electronic Computers",
+                    "sic_sector": "SEC Technology",
+                },
                 {
                     "symbol": "OLD",
                     "sec_cik": 123456,
@@ -92,7 +101,9 @@ class SecurityMasterTest(unittest.TestCase):
 
         by_symbol = result.set_index("symbol")
         self.assertEqual(by_symbol.loc["AAPL", "asset_type"], "stock")
-        self.assertEqual(by_symbol.loc["AAPL", "sector"], "Technology")
+        self.assertEqual(by_symbol.loc["AAPL", "sector"], "SEC Technology")
+        self.assertEqual(by_symbol.loc["AAPL", "industry"], "Electronic Computers")
+        self.assertEqual(by_symbol.loc["AAPL", "sector_source"], "sec_sic")
         self.assertEqual(by_symbol.loc["SPY", "asset_type"], "etf")
         self.assertTrue(bool(by_symbol.loc["SPY", "is_etf"]))
         self.assertEqual(by_symbol.loc["OLD", "security_name"], "Old Co.")
