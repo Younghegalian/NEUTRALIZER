@@ -279,17 +279,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-stooq-download",
         action="store_true",
-        help="Normalize existing Stooq raw files without downloading the Stooq archive.",
+        help="Normalize existing Stooq raw files only.",
     )
     parser.add_argument(
         "--force-stooq-download",
         action="store_true",
-        help="Download the Stooq archive even if a local copy already exists.",
+        help="Deprecated no-op; automatic Stooq downloads are disabled.",
     )
     parser.add_argument(
         "--enable-stooq-html-fallback",
         action="store_true",
-        help="Use Stooq HTML screen scraping if the bulk archive is unavailable. This is slow and incomplete.",
+        help="Deprecated no-op; Stooq HTML scraping is disabled.",
     )
     parser.add_argument(
         "--skip-kaggle-download",

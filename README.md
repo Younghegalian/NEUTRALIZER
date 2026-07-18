@@ -29,9 +29,11 @@ This repository contains the pipeline, tests, documentation, and brand assets. I
 
 FONA is open-source code for building a local research database. Users are responsible for complying with the terms of each upstream data provider they enable.
 
-- SEC and Yahoo collection require network access but no repository secrets.
-- Kaggle is optional and only used for the Arandkei delisted archive supplement.
-- FMP is optional and only used for delisting/profile metadata enrichment.
+- SEC collection requires a fair-access `User-Agent`; set `FONA_SEC_USER_AGENT` to identify your app or organization and contact email.
+- Yahoo collection requires network access but no repository secrets; generated Yahoo responses and derived bars stay local.
+- Kaggle is optional and only used for the Arandkei delisted archive supplement when your Kaggle account and the dataset license permit it.
+- FMP is optional and only used for delisting/profile metadata enrichment; generated FMP responses and derived metadata stay local.
+- Stooq support is local-file normalization only. Automatic Stooq downloads and HTML fallback scraping are disabled in the open-source pipeline.
 - Generated `data/**` artifacts are local outputs, not redistributable project assets.
 
 ## What You Get
@@ -262,7 +264,7 @@ FONA uses SEC as the primary delisting discovery spine. SEC identifies delisting
 | Supplemental delisted OHLCV | Kaggle Arandkei archive | Adds delisted historical bars available in the archive |
 | Metadata enrichment | SEC submissions API and bulk archive | Adds CIK, SIC, SIC description, and SIC-derived sector buckets |
 | Supplemental metadata | FMP delisted and profile endpoints | Adds delisting metadata and vendor sector/industry when plan limits allow |
-| Supplemental OHLCV | Stooq bulk archive | Attempted when available; pipeline continues without it |
+| Supplemental OHLCV | Stooq local files | Optional normalization of user-provided Stooq txt/csv/archive data when your Stooq terms allow it |
 
 Yahoo chart responses are accepted only when metadata identifies a USD `EQUITY` or `ETF`; non-equity, non-USD, and placeholder `YHD` matches are rejected before normalization.
 
@@ -349,13 +351,19 @@ python scripts/bootstrap.py
 
 This creates `.venv`, installs dependencies, runs the prerequisite check, and runs the unit tests.
 
-Optionally include provider credential prompts:
+Optionally include provider credential and SEC user-agent prompts:
 
 ```bash
 python scripts/bootstrap.py --with-secrets
 ```
 
-You can skip credentials for code tests or SEC/Yahoo-only exploration. Kaggle and FMP enrichments are optional.
+You can skip credentials for code tests or SEC/Yahoo-only exploration. Kaggle and FMP enrichments are optional; SEC collection should still use a descriptive `FONA_SEC_USER_AGENT`.
+
+For SEC fair-access compliance, set a descriptive user agent before collecting SEC data:
+
+```bash
+FONA_SEC_USER_AGENT="YourApp/1.0 your-email@example.com" python scripts/daily_maintenance.py --sec-company-use-bulk
+```
 
 Run a full rebuild:
 

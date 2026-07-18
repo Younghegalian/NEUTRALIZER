@@ -42,7 +42,7 @@ SEC delisting discovery
 | `fmp_delisted_metadata.py` | `data/staging/fmp_delisted_metadata.parquet` | Optional metadata enrichment. |
 | `fmp_profile_metadata.py` | `data/staging/fmp_profile_metadata.parquet` | Optional cached sector and industry enrichment. |
 | `sec_company_metadata.py` | `data/staging/sec_company_metadata.parquet` | SEC submissions CIK/SIC metadata, optionally from the nightly SEC bulk archive. |
-| `stooq_downloader.py` | `data/staging/stooq_daily_prices.parquet` | Bulk archive attempted; pipeline continues when unavailable. |
+| `stooq_downloader.py` | `data/staging/stooq_daily_prices.parquet` | Normalizes user-provided local Stooq files only; automatic downloads are disabled. |
 
 ## Canonical Merge
 

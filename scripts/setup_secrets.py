@@ -9,12 +9,19 @@ from _operator_common import PROJECT_ROOT
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Store local FONA credentials without committing secrets.")
+    parser = argparse.ArgumentParser(description="Store local FONA credentials and provider settings.")
     parser.add_argument("--kaggle-token", default=None, help="Kaggle access token. Prefer the prompt over shell history.")
     parser.add_argument("--fmp-api-key", default=None, help="FMP API key. Prefer the prompt over shell history.")
+    parser.add_argument(
+        "--sec-user-agent",
+        default=None,
+        help="SEC fair-access User-Agent, for example 'YourApp/1.0 email@example.com'.",
+    )
     parser.add_argument("--skip-kaggle", action="store_true", help="Do not prompt for or update the Kaggle token.")
     parser.add_argument("--skip-fmp", action="store_true", help="Do not prompt for or update FMP_API_KEY.")
+    parser.add_argument("--skip-sec-user-agent", action="store_true", help="Do not prompt for or update FONA_SEC_USER_AGENT.")
     parser.add_argument("--clear-fmp-api-key", action="store_true", help="Remove FMP_API_KEY from .env.local.")
+    parser.add_argument("--clear-sec-user-agent", action="store_true", help="Remove FONA_SEC_USER_AGENT from .env.local.")
     parser.add_argument("--non-interactive", action="store_true", help="Do not prompt; only use supplied arguments.")
     return parser.parse_args()
 
@@ -23,6 +30,13 @@ def _prompt_secret(label: str, non_interactive: bool) -> str:
     if non_interactive:
         return ""
     value = getpass.getpass(f"{label}: ")
+    return value.strip()
+
+
+def _prompt_value(label: str, non_interactive: bool) -> str:
+    if non_interactive:
+        return ""
+    value = input(f"{label}: ")
     return value.strip()
 
 
@@ -60,6 +74,14 @@ def main() -> int:
     if not args.skip_fmp and not args.clear_fmp_api_key:
         fmp_key = args.fmp_api_key if args.fmp_api_key is not None else _prompt_secret("FMP_API_KEY, press Enter to skip", args.non_interactive)
 
+    sec_user_agent = None
+    if not args.skip_sec_user_agent and not args.clear_sec_user_agent:
+        sec_user_agent = (
+            args.sec_user_agent
+            if args.sec_user_agent is not None
+            else _prompt_value("FONA_SEC_USER_AGENT, press Enter to skip", args.non_interactive)
+        )
+
     if kaggle_token:
         _save_kaggle_token(kaggle_token)
     elif not args.skip_kaggle:
@@ -74,6 +96,15 @@ def main() -> int:
         print(f"Saved FMP key to {env_path}")
     elif not args.skip_fmp:
         print("Skipped FMP key.")
+
+    if args.clear_sec_user_agent:
+        _set_env_value(env_path, "FONA_SEC_USER_AGENT", None)
+        print(f"Removed FONA_SEC_USER_AGENT from {env_path}")
+    elif sec_user_agent:
+        _set_env_value(env_path, "FONA_SEC_USER_AGENT", sec_user_agent)
+        print(f"Saved SEC User-Agent to {env_path}")
+    elif not args.skip_sec_user_agent:
+        print("Skipped SEC User-Agent.")
 
     print("Done. Run: python scripts/daily_maintenance.py")
     return 0

@@ -9,8 +9,8 @@ import pandas as pd
 from src import config
 from src.collectors.sec_delisting_collector import (
     SEC_ARCHIVES_ROOT,
-    SEC_HEADERS,
     extract_delisting_doc_fields,
+    sec_headers,
 )
 from src.utils import empty_frame, normalize_symbol, read_parquet_if_exists, write_parquet
 
@@ -165,7 +165,7 @@ def _local_sec_doc_path(raw_dir: Path, filename: object) -> Path:
 def _request_sec_text(url: str, sleep_seconds: float = 0.12) -> str:
     import requests
 
-    response = requests.get(url, headers=SEC_HEADERS, timeout=(5, 60))
+    response = requests.get(url, headers=sec_headers(), timeout=(5, 60))
     response.raise_for_status()
     time.sleep(sleep_seconds)
     return response.text

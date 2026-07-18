@@ -9,6 +9,7 @@ Daily maintenance is designed for a local machine with network access and enough
 - Optional Kaggle token when refreshing Kaggle archive data
 - Optional FMP key for metadata enrichment
 - Network access to SEC and Yahoo
+- `FONA_SEC_USER_AGENT` set to a descriptive SEC fair-access user agent before SEC collection
 
 ## Fresh Setup
 
@@ -39,7 +40,7 @@ $env:FONA_PYTHON="C:\Path\To\python.exe"
 powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
 ```
 
-## Secrets
+## Local Provider Settings
 
 Interactive setup:
 
@@ -47,10 +48,11 @@ Interactive setup:
 python scripts/setup_secrets.py
 ```
 
-This writes local-only credentials when provided:
+This writes local-only credentials and settings when provided:
 
 - Kaggle token to `~/.kaggle/access_token`
 - FMP key to `.env.local` as `FMP_API_KEY`
+- SEC fair-access user agent to `.env.local` as `FONA_SEC_USER_AGENT`
 
 For non-interactive environments, pass secrets through your secret manager or CI environment instead of shell history where possible.
 
@@ -122,6 +124,7 @@ The same options can be supplied through environment variables when a scheduler 
 | Environment variable | Equivalent CLI option |
 | --- | --- |
 | `FONA_START_DATE` | `--start-date` |
+| `FONA_SEC_USER_AGENT` | SEC request `User-Agent` header |
 | `FONA_YAHOO_WORKERS` | `--yahoo-workers` |
 | `FONA_FMP_PROFILE_LIMIT` | `--fmp-profile-limit` |
 | `FONA_SEC_COMPANY_LIMIT` | `--sec-company-limit` |
