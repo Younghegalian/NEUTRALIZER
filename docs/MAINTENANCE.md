@@ -1,12 +1,12 @@
 # Daily Maintenance
 
-Daily maintenance is designed for a local machine that already has the required credentials, network access, and enough disk space. The canonical operator commands are Python scripts under `scripts/`, so the same workflow works on Windows, macOS, and Linux.
+Daily maintenance is designed for a local machine with network access and enough disk space for generated data. Optional provider credentials unlock optional enrichment sources. The canonical operator commands are Python scripts under `scripts/`, so the same workflow works on Windows, macOS, and Linux.
 
 ## Requirements
 
 - Python 3.10+
 - Python dependencies installed from `requirements.txt`
-- Kaggle token when refreshing Kaggle data
+- Optional Kaggle token when refreshing Kaggle archive data
 - Optional FMP key for metadata enrichment
 - Network access to SEC and Yahoo
 
@@ -37,7 +37,7 @@ Interactive setup:
 python scripts/setup_secrets.py
 ```
 
-This writes local-only credentials:
+This writes local-only credentials when provided:
 
 - Kaggle token to `~/.kaggle/access_token`
 - FMP key to `.env.local` as `FMP_API_KEY`

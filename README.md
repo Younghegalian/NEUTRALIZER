@@ -23,7 +23,16 @@
 
 FONA, the Finance Open Network Archive, builds a local market-data layer for backtests that need more than today's surviving tickers. It combines SEC-led delisting discovery, recoverable historical daily bars, security classification, liquidity metrics, and a date-by-date tradable universe into one auditable DuckDB database.
 
-This repository contains the pipeline, tests, documentation, and brand assets. Generated market data, raw vendor/API responses, DuckDB files, and secrets stay local and are intentionally ignored by Git.
+This repository contains the pipeline, tests, documentation, and brand assets. It does not ship generated market data. Raw vendor/API responses, DuckDB files, parquet outputs, and secrets stay local and are intentionally ignored by Git.
+
+## Open-Source Data Boundary
+
+FONA is open-source code for building a local research database. Users are responsible for complying with the terms of each upstream data provider they enable.
+
+- SEC and Yahoo collection require network access but no repository secrets.
+- Kaggle is optional and only used for the Arandkei delisted archive supplement.
+- FMP is optional and only used for delisting/profile metadata enrichment.
+- Generated `data/**` artifacts are local outputs, not redistributable project assets.
 
 ## What You Get
 
@@ -43,9 +52,9 @@ This repository contains the pipeline, tests, documentation, and brand assets. G
 | Liquidity features | `liquidity_metrics` with raw and quality-filtered dollar volume, ADV20, traded days, and next open |
 | Quality gates | Unit tests, hard daily-bar audit, price-quality flags, and annual listing/delisting flow audit |
 
-## Data Product Snapshot
+## Example Data Product Snapshot
 
-Latest local build:
+Maintainer local build snapshot. Your counts will differ with provider access, cache state, and build date.
 
 | Metric | Value |
 | --- | ---: |
@@ -338,11 +347,13 @@ Install dependencies:
 python -m pip install -r requirements.txt
 ```
 
-Set local secrets:
+Optionally set local provider credentials:
 
 ```bash
 python scripts/setup_secrets.py
 ```
+
+You can skip this step for code tests or SEC/Yahoo-only exploration. Kaggle and FMP enrichments are optional.
 
 Run a full rebuild:
 
@@ -389,6 +400,8 @@ data/                       Local-only generated data, ignored by Git
 - [Data Dictionary](docs/DATA_DICTIONARY.md)
 - [Daily Maintenance](docs/MAINTENANCE.md)
 - [Coverage Notes](docs/COVERAGE.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security Policy](SECURITY.md)
 
 ## Boundaries
 

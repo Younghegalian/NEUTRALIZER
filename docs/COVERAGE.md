@@ -7,7 +7,9 @@ Coverage is split into two different questions:
 - SEC-led discovery coverage: how many delisting events, CIKs, and candidate tickers were found.
 - Price-bar recovery coverage: how many of those candidates could actually produce daily OHLCV rows from Yahoo, Kaggle, or other price sources.
 
-## Latest Local Coverage
+## Maintainer Snapshot: Local Coverage
+
+These figures are from one maintainer build and are not bundled with the repository.
 
 | Metric | Value |
 | --- | ---: |
@@ -32,7 +34,7 @@ FONA keeps raw prices untouched and applies delisting policy in separate backtes
 - `terminal_event_validity` and `valid_terminal_events`: liquidation-safety layer that excludes terminal hints when later universe membership makes them unsafe as hard delisting events.
 - `backtest_universe_membership`: `US_DAILY_LIFECYCLE_ADJUSTED_V2`, excluding dates after selected delisting events.
 
-Latest lifecycle build:
+Maintainer lifecycle build:
 
 | Metric | Value |
 | --- | ---: |
@@ -64,7 +66,7 @@ Annual listing and delisting fit is measured with:
 python -m src.tools.audit_market_flows --fetch-benchmarks --output data/research/market_flow_audit.csv
 ```
 
-Latest `backtest_stock_major_universe` completed-year medians:
+Maintainer `backtest_stock_major_universe` completed-year medians:
 
 | Metric | Value |
 | --- | ---: |
@@ -78,7 +80,7 @@ Latest `backtest_stock_major_universe` completed-year medians:
 
 Interpretation: SEC-led price recovery captures a meaningful share of annual delisting events and the lifecycle-adjusted universe now removes all dates after selected delisting events. Local universe exits are still lower than CRSP-grade lifecycle coverage because many public delisting candidates remain unpriced or never pass the liquidity universe. Treat the database as survivorship-reduced unless a paid lifecycle identifier source such as CRSP, Norgate, Sharadar, Refinitiv, or Polygon delisted history is added.
 
-## Latest Classification Coverage
+## Maintainer Snapshot: Classification Coverage
 
 | Metric | Value |
 | --- | ---: |
@@ -93,7 +95,7 @@ Interpretation: SEC-led price recovery captures a meaningful share of annual del
 | FMP profile sector source | 420 |
 | SEC SIC sector source | 6,812 |
 
-## Latest Local Validation
+## Maintainer Snapshot: Local Validation
 
 | Check | Result |
 | --- | ---: |

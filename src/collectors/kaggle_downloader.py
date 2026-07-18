@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import os
 import subprocess
 import sys
@@ -25,6 +26,10 @@ def has_kaggle_credentials() -> bool:
     return kaggle_json.exists() or access_token.exists()
 
 
+def has_kaggle_package() -> bool:
+    return importlib.util.find_spec("kaggle") is not None
+
+
 def download_kaggle_delisted_dataset(
     raw_dir: Path = config.RAW_KAGGLE_DELISTED_DIR,
     dataset: str = KAGGLE_DATASET,
@@ -41,6 +46,11 @@ def download_kaggle_delisted_dataset(
         print("[kaggle_download] Kaggle credentials not found; skipping download.")
         print("[kaggle_download] Add ~/.kaggle/access_token or set KAGGLE_API_TOKEN.")
         print("[kaggle_download] Legacy ~/.kaggle/kaggle.json and KAGGLE_USERNAME/KAGGLE_KEY also work.")
+        return False
+
+    if not has_kaggle_package():
+        print("[kaggle_download] Python kaggle package not installed; skipping download.")
+        print("[kaggle_download] Install dependencies with: python -m pip install -r requirements.txt")
         return False
 
     command = [

@@ -9,7 +9,8 @@ from src.collectors.kaggle_downloader import has_kaggle_credentials
 from src.secrets import load_local_env
 
 
-REQUIRED_PACKAGES = ["pandas", "numpy", "duckdb", "pyarrow", "requests", "tqdm", "dateutil", "kaggle"]
+REQUIRED_PACKAGES = ["pandas", "numpy", "duckdb", "pyarrow", "requests", "tqdm", "dateutil"]
+OPTIONAL_PACKAGES = ["kaggle"]
 
 
 def _package_status(name: str) -> str:
@@ -32,6 +33,8 @@ def check_prereqs() -> bool:
         status = _package_status(package)
         ok = ok and status == "OK"
         print(f"  {package}: {status}")
+    for package in OPTIONAL_PACKAGES:
+        print(f"  {package}: {_package_status(package)} (optional)")
 
     print()
     print("Local folders:")
@@ -48,7 +51,7 @@ def check_prereqs() -> bool:
 
     print()
     print("Credentials:")
-    kaggle_status = "OK" if has_kaggle_credentials() else "MISSING"
+    kaggle_status = "OK" if has_kaggle_credentials() else "OPTIONAL / NOT SET"
     print(f"  Kaggle API: {kaggle_status}")
     print(f"  FMP_API_KEY: {'OK' if os.getenv('FMP_API_KEY') else 'OPTIONAL / NOT SET'}")
 
@@ -63,11 +66,11 @@ def check_prereqs() -> bool:
 
     if kaggle_status != "OK":
         print()
-        print("Kaggle is required for automatic delisted archive download.")
-        print("Place the new token at %USERPROFILE%\\.kaggle\\access_token or set KAGGLE_API_TOKEN.")
-        print("Legacy %USERPROFILE%\\.kaggle\\kaggle.json and KAGGLE_USERNAME/KAGGLE_KEY also work.")
+        print("Kaggle is optional and only needed for automatic delisted archive download.")
+        print("Place the new token at ~/.kaggle/access_token or set KAGGLE_API_TOKEN.")
+        print("Legacy ~/.kaggle/kaggle.json and KAGGLE_USERNAME/KAGGLE_KEY also work.")
 
-    return ok and kaggle_status == "OK"
+    return ok
 
 
 if __name__ == "__main__":
