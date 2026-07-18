@@ -10,10 +10,20 @@ Daily maintenance is designed for a local machine with network access and enough
 - Optional FMP key for metadata enrichment
 - Network access to SEC and Yahoo
 
-Install dependencies:
+## Fresh Setup
+
+One-command local setup:
 
 ```bash
-python -m pip install -r requirements.txt
+python scripts/bootstrap.py
+```
+
+This creates `.venv`, installs dependencies, checks prerequisites, and runs unit tests.
+
+To include optional provider credential prompts:
+
+```bash
+python scripts/bootstrap.py --with-secrets
 ```
 
 If your shell's `python` points to the wrong interpreter, set `FONA_PYTHON` or run the script with the exact interpreter you want:
@@ -26,7 +36,7 @@ On PowerShell:
 
 ```powershell
 $env:FONA_PYTHON="C:\Path\To\python.exe"
-python scripts\daily_maintenance.py --dry-run
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
 ```
 
 ## Secrets
@@ -209,6 +219,7 @@ python scripts/reset_local_data.py --all-local-data --force
 Windows users can still use the existing wrappers if they prefer PowerShell:
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\setup_secrets.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\daily_maintenance.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\reset_local_data.ps1

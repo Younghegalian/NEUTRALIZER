@@ -341,19 +341,21 @@ Latest `backtest_stock_major_universe` completed-year medians:
 
 ## Quick Start
 
-Install dependencies:
+Bootstrap a local development environment:
 
 ```bash
-python -m pip install -r requirements.txt
+python scripts/bootstrap.py
 ```
 
-Optionally set local provider credentials:
+This creates `.venv`, installs dependencies, runs the prerequisite check, and runs the unit tests.
+
+Optionally include provider credential prompts:
 
 ```bash
-python scripts/setup_secrets.py
+python scripts/bootstrap.py --with-secrets
 ```
 
-You can skip this step for code tests or SEC/Yahoo-only exploration. Kaggle and FMP enrichments are optional.
+You can skip credentials for code tests or SEC/Yahoo-only exploration. Kaggle and FMP enrichments are optional.
 
 Run a full rebuild:
 
