@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import tempfile
 from pathlib import Path
 
 import duckdb
@@ -326,10 +327,9 @@ def _normalize_prices_duckdb(
     for path in [daily_prices_path, symbol_master_path, duplicate_report_path, bad_rows_report_path]:
         path.parent.mkdir(parents=True, exist_ok=True)
 
-    temp_dir = config.DATA_DIR / "duckdb_tmp" / "normalize"
-    if temp_dir.exists():
-        shutil.rmtree(temp_dir)
-    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_parent = config.DATA_DIR / "duckdb_tmp" / "normalize"
+    temp_parent.mkdir(parents=True, exist_ok=True)
+    temp_dir = Path(tempfile.mkdtemp(prefix="run-", dir=temp_parent))
 
     bad_condition = _bad_condition()
     bad_reason_expr = _bad_reason_expr()
