@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src import config
 from src.collectors.kaggle_downloader import has_kaggle_credentials
+from src.collectors.sec_delisting_collector import sec_user_agent
 from src.secrets import load_local_env
 
 
@@ -54,8 +55,9 @@ def check_prereqs() -> bool:
     kaggle_status = "OK" if has_kaggle_credentials() else "OPTIONAL / NOT SET"
     print(f"  Kaggle API: {kaggle_status}")
     print(f"  FMP_API_KEY: {'OK' if os.getenv('FMP_API_KEY') else 'OPTIONAL / NOT SET'}")
-    sec_user_agent = os.getenv("FONA_SEC_USER_AGENT")
-    print(f"  FONA_SEC_USER_AGENT: {'OK' if sec_user_agent else 'RECOMMENDED / NOT SET'}")
+    configured_sec_user_agent = sec_user_agent()
+    sec_user_agent_status = "OK" if os.getenv("FONA_SEC_USER_AGENT") and "@" in configured_sec_user_agent else "RECOMMENDED / NOT SET"
+    print(f"  FONA_SEC_USER_AGENT: {sec_user_agent_status}")
 
     print()
     print("Raw data currently present:")
@@ -72,7 +74,7 @@ def check_prereqs() -> bool:
         print("Place the new token at ~/.kaggle/access_token or set KAGGLE_API_TOKEN.")
         print("Legacy ~/.kaggle/kaggle.json and KAGGLE_USERNAME/KAGGLE_KEY also work.")
 
-    if not sec_user_agent:
+    if sec_user_agent_status != "OK":
         print()
         print("Set FONA_SEC_USER_AGENT before SEC collection to identify your app and contact email.")
 

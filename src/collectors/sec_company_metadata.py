@@ -37,7 +37,7 @@ def _empty_metadata() -> pd.DataFrame:
 def _request_json(url: str, sleep_seconds: float = 0.12) -> object:
     import requests
 
-    response = requests.get(url, headers=sec_headers(), timeout=(5, 60))
+    response = requests.get(url, headers=sec_headers(require_contact=True), timeout=(5, 60))
     response.raise_for_status()
     time.sleep(sleep_seconds)
     return response.json()
@@ -304,7 +304,7 @@ def _download_bulk_submissions(raw_dir: Path, force: bool = False) -> Path:
         return zip_path
 
     tmp_path = raw_dir / "submissions.zip.tmp"
-    response = requests.get(SEC_SUBMISSIONS_BULK_URL, headers=sec_headers(), stream=True, timeout=(5, 300))
+    response = requests.get(SEC_SUBMISSIONS_BULK_URL, headers=sec_headers(require_contact=True), stream=True, timeout=(5, 300))
     response.raise_for_status()
     total = int(response.headers.get("Content-Length") or 0)
     downloaded = 0

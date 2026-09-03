@@ -165,7 +165,7 @@ def _local_sec_doc_path(raw_dir: Path, filename: object) -> Path:
 def _request_sec_text(url: str, sleep_seconds: float = 0.12) -> str:
     import requests
 
-    response = requests.get(url, headers=sec_headers(), timeout=(5, 60))
+    response = requests.get(url, headers=sec_headers(require_contact=True), timeout=(5, 60))
     response.raise_for_status()
     time.sleep(sleep_seconds)
     return response.text

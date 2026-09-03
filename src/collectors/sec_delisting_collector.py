@@ -18,10 +18,19 @@ from src.utils import normalize_symbol, parse_date, write_parquet
 DEFAULT_SEC_USER_AGENT = "FONA/1.0 open-source research tool; set FONA_SEC_USER_AGENT with contact email"
 
 
-def sec_headers() -> dict[str, str]:
+def sec_user_agent(require_contact: bool = False) -> str:
     load_local_env()
+    user_agent = os.getenv("FONA_SEC_USER_AGENT", "").strip()
+    if require_contact and not user_agent:
+        raise RuntimeError("Set FONA_SEC_USER_AGENT before SEC collection, for example: FONA/1.0 email@example.com")
+    if require_contact and "@" not in user_agent:
+        raise RuntimeError("FONA_SEC_USER_AGENT must include a contact email for SEC fair-access requests.")
+    return user_agent or DEFAULT_SEC_USER_AGENT
+
+
+def sec_headers(require_contact: bool = False) -> dict[str, str]:
     return {
-        "User-Agent": os.getenv("FONA_SEC_USER_AGENT", DEFAULT_SEC_USER_AGENT),
+        "User-Agent": sec_user_agent(require_contact=require_contact),
         "Accept-Encoding": "gzip, deflate",
     }
 
@@ -40,7 +49,7 @@ def _quarters(start_year: int, end_year: int) -> list[tuple[int, int]]:
 def _request_text(url: str, sleep_seconds: float = 0.12) -> str:
     import requests
 
-    response = requests.get(url, headers=sec_headers(), timeout=(5, 60))
+    response = requests.get(url, headers=sec_headers(require_contact=True), timeout=(5, 60))
     response.raise_for_status()
     time.sleep(sleep_seconds)
     return response.text
@@ -49,7 +58,7 @@ def _request_text(url: str, sleep_seconds: float = 0.12) -> str:
 def _request_bytes(url: str, sleep_seconds: float = 0.12) -> bytes:
     import requests
 
-    response = requests.get(url, headers=sec_headers(), timeout=(5, 120))
+    response = requests.get(url, headers=sec_headers(require_contact=True), timeout=(5, 120))
     response.raise_for_status()
     time.sleep(sleep_seconds)
     return response.content
@@ -272,7 +281,7 @@ def collect_sec_form345_ticker_map(
 def _collect_current_sec_tickers() -> pd.DataFrame:
     import requests
 
-    response = requests.get(SEC_COMPANY_TICKERS_EXCHANGE_URL, headers=sec_headers(), timeout=(5, 30))
+    response = requests.get(SEC_COMPANY_TICKERS_EXCHANGE_URL, headers=sec_headers(require_contact=True), timeout=(5, 30))
     response.raise_for_status()
     payload = response.json()
     df = pd.DataFrame(payload["data"], columns=payload["fields"])
